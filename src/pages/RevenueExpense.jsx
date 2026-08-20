@@ -2,7 +2,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,6 +12,7 @@ import {
   useMemo,
   useState
 } from "react";
+import {getDashboardFilters} from "../utils/filters";
 import Card from "../components/Card";
 import HorizontalBarChart from "../components/HorizontalBarChart";
 import {
@@ -41,30 +41,45 @@ function formatCompact(value) {
     absolute >=
     1_000_000_000
   ) {
-    return `${sign}${Math.floor(
+    const result =
       absolute /
-        1_000_000_000
-    )}bn`;
+      1_000_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }B`;
   }
 
   if (
     absolute >=
     1_000_000
   ) {
-    return `${sign}${Math.floor(
+    const result =
       absolute /
-        1_000_000
-    )}M`;
+      1_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }M`;
   }
 
   if (
     absolute >=
     1_000
   ) {
-    return `${sign}${Math.floor(
+    const result =
       absolute /
-        1_000
-    )}K`;
+      1_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }K`;
   }
 
   return `${Math.round(
@@ -111,7 +126,9 @@ function wrapLabel(
       current = next;
     } else {
       if (current) {
-        lines.push(current);
+        lines.push(
+          current
+        );
       }
 
       current = word;
@@ -119,7 +136,9 @@ function wrapLabel(
   }
 
   if (current) {
-    lines.push(current);
+    lines.push(
+      current
+    );
   }
 
   return lines.slice(
@@ -182,6 +201,20 @@ function CustomYAxisTick({
   );
 }
 
+const BRANCH_AXIS_MIN =
+  0;
+
+const BRANCH_AXIS_MAX =
+  3_000_000_000;
+
+const BRANCH_AXIS_TICKS = [
+  0,
+  500_000_000,
+  1_000_000_000,
+  2_000_000_000,
+  3_000_000_000
+];
+
 function BranchRevenueExpenseChart({
   data = []
 }) {
@@ -204,114 +237,186 @@ function BranchRevenueExpenseChart({
         )
       : [];
 
-  const calculatedHeight =
+  const yAxisWidth =
+    170;
+
+  const chartLeftMargin =
+    8;
+
+  const chartRightMargin =
+    75;
+
+  const rowHeight =
+    40;
+
+  const visibleHeight =
+    310;
+
+  const chartHeight =
     Math.max(
-      340,
+      visibleHeight,
       safeData.length *
-        44 +
-        50
+        rowHeight +
+        10
     );
 
   return (
-    <div className="horizontal-chart-scroll">
-      <div
-        className="horizontal-chart-inner"
-        style={{
-          height:
-            calculatedHeight
-        }}
-      >
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
+    <div className="branch-re-chart">
+      <div className="branch-re-legend">
+        <span className="branch-re-legend-item">
+          <span className="branch-re-legend-dot expense" />
+          Зардал
+        </span>
+
+        <span className="branch-re-legend-item">
+          <span className="branch-re-legend-dot revenue" />
+          Орлого
+        </span>
+      </div>
+
+      <div className="branch-re-scroll">
+        <div
+          className="branch-re-body"
+          style={{
+            height:
+              `${chartHeight}px`
+          }}
         >
-          <BarChart
-            data={safeData}
-            layout="vertical"
-            margin={{
-              top: 10,
-              right: 70,
-              bottom: 25,
-              left: 10
-            }}
-            barCategoryGap={10}
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              horizontal={false}
-              stroke="#edf1f7"
-            />
-
-            <XAxis
-              type="number"
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill:
-                  "#8190a7",
-                fontSize: 10
+            <BarChart
+              data={safeData}
+              layout="vertical"
+              margin={{
+                top: 5,
+                right:
+                  chartRightMargin,
+                bottom: 0,
+                left:
+                  chartLeftMargin
               }}
-              tickFormatter={
-                formatCompact
-              }
-            />
+              barCategoryGap={8}
+              barGap={3}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={false}
+                stroke="#edf1f7"
+              />
 
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={165}
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              tick={
-                <CustomYAxisTick />
-              }
-            />
+              <XAxis
+                type="number"
+                domain={[
+                  BRANCH_AXIS_MIN,
+                  BRANCH_AXIS_MAX
+                ]}
+                hide
+                allowDataOverflow
+              />
 
-            <Tooltip
-              formatter={(
-                value,
-                name
-              ) => [
-                formatTooltip(
-                  value
-                ),
-                name
-              ]}
-            />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={
+                  yAxisWidth
+                }
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+                tick={
+                  <CustomYAxisTick />
+                }
+              />
 
-            <Legend
-              verticalAlign="bottom"
-              height={30}
-            />
+              <Tooltip
+                cursor={{
+                  fill:
+                    "rgba(15, 23, 42, 0.025)"
+                }}
+                formatter={(
+                  value,
+                  name
+                ) => [
+                  formatTooltip(
+                    value
+                  ),
+                  name
+                ]}
+              />
 
-            <Bar
-              dataKey="expense"
-              name="Зардал"
-              fill="#2966e8"
-              barSize={10}
-              radius={[
-                0,
-                4,
-                4,
-                0
-              ]}
-            />
+              <Bar
+                dataKey="expense"
+                name="Зардал"
+                fill="#2966e8"
+                barSize={10}
+                radius={[
+                  0,
+                  4,
+                  4,
+                  0
+                ]}
+                isAnimationActive={
+                  false
+                }
+              />
 
-            <Bar
-              dataKey="revenue"
-              name="Орлого"
-              fill="#43d77b"
-              barSize={10}
-              radius={[
-                0,
-                4,
-                4,
-                0
-              ]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+              <Bar
+                dataKey="revenue"
+                name="Орлого"
+                fill="#43d77b"
+                barSize={10}
+                radius={[
+                  0,
+                  4,
+                  4,
+                  0
+                ]}
+                isAnimationActive={
+                  false
+                }
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="shared-bottom-axis">
+        <div
+          className="shared-bottom-axis-track"
+          style={{
+            marginLeft:
+              `${
+                yAxisWidth +
+                chartLeftMargin
+              }px`,
+            marginRight:
+              `${chartRightMargin}px`
+          }}
+        >
+          {BRANCH_AXIS_TICKS.map(
+            (tick) => (
+              <span
+                key={tick}
+                className="shared-bottom-axis-tick"
+                style={{
+                  left: `${
+                    ((tick -
+                      BRANCH_AXIS_MIN) /
+                      (BRANCH_AXIS_MAX -
+                        BRANCH_AXIS_MIN)) *
+                    100
+                  }%`
+                }}
+              >
+                {formatCompact(
+                  tick
+                )}
+              </span>
+            )
+          )}
+        </div>
       </div>
     </div>
   );
@@ -319,8 +424,22 @@ function BranchRevenueExpenseChart({
 
 export default function RevenueExpense() {
   const {
-    filters
+    selectedMonth,
+    selectedBranch
   } = useDashboard();
+
+  const filters =
+    useMemo(
+      () =>
+        getDashboardFilters(
+          selectedMonth,
+          selectedBranch
+        ),
+      [
+        selectedMonth,
+        selectedBranch
+      ]
+    );
 
   const [
     revenueAccounts,
@@ -357,7 +476,10 @@ export default function RevenueExpense() {
 
     async function load() {
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
+
         setError("");
 
         const [
@@ -437,7 +559,9 @@ export default function RevenueExpense() {
     return () => {
       mounted = false;
     };
-  }, [filters]);
+  }, [
+    filters
+  ]);
 
   const revenueRows =
     useMemo(
@@ -445,7 +569,10 @@ export default function RevenueExpense() {
         [
           ...revenueAccounts
         ].sort(
-          (a, b) =>
+          (
+            a,
+            b
+          ) =>
             Number(
               b.value || 0
             ) -
@@ -464,7 +591,10 @@ export default function RevenueExpense() {
         [
           ...expenseGroups
         ].sort(
-          (a, b) =>
+          (
+            a,
+            b
+          ) =>
             Number(
               b.value || 0
             ) -
@@ -483,7 +613,10 @@ export default function RevenueExpense() {
         [
           ...expenseAccounts
         ].sort(
-          (a, b) =>
+          (
+            a,
+            b
+          ) =>
             Number(
               b.value || 0
             ) -
@@ -525,9 +658,21 @@ export default function RevenueExpense() {
           className="revenue-expense-card"
         >
           <HorizontalBarChart
-            data={revenueRows}
-            yAxisWidth={195}
-            minHeight={340}
+            data={
+              revenueRows
+            }
+            yAxisWidth={
+              195
+            }
+            rowHeight={
+              40
+            }
+            barSize={
+              20
+            }
+            visibleHeight={
+              310
+            }
           />
         </Card>
 
@@ -539,8 +684,18 @@ export default function RevenueExpense() {
             data={
               expenseGroupRows
             }
-            yAxisWidth={210}
-            minHeight={340}
+            yAxisWidth={
+              210
+            }
+            rowHeight={
+              40
+            }
+            barSize={
+              20
+            }
+            visibleHeight={
+              310
+            }
           />
         </Card>
 
@@ -563,8 +718,18 @@ export default function RevenueExpense() {
             data={
               expenseAccountRows
             }
-            yAxisWidth={210}
-            minHeight={340}
+            yAxisWidth={
+              210
+            }
+            rowHeight={
+              40
+            }
+            barSize={
+              20
+            }
+            visibleHeight={
+              310
+            }
           />
         </Card>
       </div>

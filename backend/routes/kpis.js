@@ -159,96 +159,102 @@ function lastMonthRange(dateTo) {
   };
 }
 
-router.get("/kpis", async (req, res) => {
-  try {
-    const {
-      branch_id,
-      date_from = "2026-01-01",
-      date_to = "2026-08-31"
-    } = req.query;
+router.get(
+  "/kpis",
+  async (req, res) => {
+    try {
+      const {
+        branch_id,
+        date_from = "2026-01-01",
+        date_to = "2026-08-31"
+      } = req.query;
 
-    const current = await getKpiValues(
-      date_from,
-      date_to,
-      branch_id
-    );
-
-    const latestMonth = lastMonthRange(
-      date_to
-    );
-
-    const previousRange = previousMonthRange(
-      latestMonth.from
-    );
-
-    const latestMonthValues =
-      await getKpiValues(
-        latestMonth.from,
-        latestMonth.to,
+      const current = await getKpiValues(
+        date_from,
+        date_to,
         branch_id
       );
 
-    const previousMonthValues =
-      await getKpiValues(
-        previousRange.from,
-        previousRange.to,
-        branch_id
+      const latestMonth = lastMonthRange(
+        date_to
       );
 
-    res.json({
-      revenue: current.revenue,
-      revenue_previous:
-        previousMonthValues.revenue,
-      revenue_change:
-        percentageChange(
-          latestMonthValues.revenue,
-          previousMonthValues.revenue
-        ),
+      const previousRange = previousMonthRange(
+        latestMonth.from
+      );
 
-      expense: current.expense,
-      expense_previous:
-        previousMonthValues.expense,
-      expense_change:
-        percentageChange(
-          latestMonthValues.expense,
-          previousMonthValues.expense
-        ),
+      const latestMonthValues =
+        await getKpiValues(
+          latestMonth.from,
+          latestMonth.to,
+          branch_id
+        );
 
-      receivable: current.receivable,
-      receivable_previous:
-        previousMonthValues.receivable,
-      receivable_change:
-        percentageChange(
-          latestMonthValues.receivable,
-          previousMonthValues.receivable
-        ),
+      const previousMonthValues =
+        await getKpiValues(
+          previousRange.from,
+          previousRange.to,
+          branch_id
+        );
 
-      payable: current.payable,
-      payable_previous:
-        previousMonthValues.payable,
-      payable_change:
-        percentageChange(
-          latestMonthValues.payable,
-          previousMonthValues.payable
-        ),
+      return res.json({
+        revenue: current.revenue,
+        revenue_previous:
+          previousMonthValues.revenue,
+        revenue_change:
+          percentageChange(
+            latestMonthValues.revenue,
+            previousMonthValues.revenue
+          ),
 
-      net_profit: current.net_profit,
-      net_profit_previous:
-        previousMonthValues.net_profit,
-      net_profit_change:
-        percentageChange(
-          latestMonthValues.net_profit,
-          previousMonthValues.net_profit
-        )
-    });
-  } catch (error) {
-    console.error("KPI ERROR:", error);
+        expense: current.expense,
+        expense_previous:
+          previousMonthValues.expense,
+        expense_change:
+          percentageChange(
+            latestMonthValues.expense,
+            previousMonthValues.expense
+          ),
 
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+        receivable: current.receivable,
+        receivable_previous:
+          previousMonthValues.receivable,
+        receivable_change:
+          percentageChange(
+            latestMonthValues.receivable,
+            previousMonthValues.receivable
+          ),
+
+        payable: current.payable,
+        payable_previous:
+          previousMonthValues.payable,
+        payable_change:
+          percentageChange(
+            latestMonthValues.payable,
+            previousMonthValues.payable
+          ),
+
+        net_profit: current.net_profit,
+        net_profit_previous:
+          previousMonthValues.net_profit,
+        net_profit_change:
+          percentageChange(
+            latestMonthValues.net_profit,
+            previousMonthValues.net_profit
+          )
+      });
+    } catch (error) {
+      console.error(
+        "KPI ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
   }
-});
+);
 
 export default router;

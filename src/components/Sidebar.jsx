@@ -2,6 +2,16 @@ import {
   NavLink
 } from "react-router-dom";
 import {
+  LayoutDashboard,
+  HandCoins,
+  ReceiptText,
+  ChartNoAxesCombined,
+  Settings,
+  LogOut,
+  PanelLeftClose,
+  PanelRightOpen
+} from "lucide-react";
+import {
   useDashboard
 } from "../context/DashboardContext";
 import {
@@ -12,27 +22,26 @@ const baseItems = [
   {
     to: "/",
     mn: "Удирдлагын талбар",
-    en: "Dashboard"
+    en: "Dashboard",
+    icon: LayoutDashboard
   },
   {
     to: "/receivables",
     mn: "Авлага",
-    en: "Receivables"
+    en: "Receivables",
+    icon: HandCoins
   },
   {
     to: "/payables",
     mn: "Өглөг",
-    en: "Payables"
+    en: "Payables",
+    icon: ReceiptText
   },
   {
     to: "/revenue-expense",
-    mn: "Орлого/Зардал",
-    en: "Revenue/Expense"
-  },
-  {
-    to: "/cash-flow",
-    mn: "Мөнгөн урсгал",
-    en: "Cash Flow"
+    mn: "Орлого / Зардал",
+    en: "Revenue / Expense",
+    icon: ChartNoAxesCombined
   }
 ];
 
@@ -48,24 +57,9 @@ export default function Sidebar() {
     logout
   } = useAuth();
 
-  const items = [
-    ...baseItems,
-    ...(user?.role ===
-    "admin"
-      ? [
-          {
-            to: "/users",
-            mn: "Хүмүүс",
-            en: "People"
-          }
-        ]
-      : [])
-  ];
-
   const userInitial =
     String(
-      user?.email ||
-        "U"
+      user?.email || "U"
     )
       .charAt(0)
       .toUpperCase();
@@ -79,137 +73,182 @@ export default function Sidebar() {
       }`}
     >
       <div className="brand">
-        <div className="brand-icon">
-          M
+        <div className="brand-main">
+        <img
+          src="/misheel.jpeg"
+          alt="Мишээл групп"
+          className="brand-logo"
+        />
+
+          {!sidebarCollapsed && (
+            <div className="brand-text">
+              <strong>
+                МИШЭЭЛ
+              </strong>
+
+              <span>
+                ГРУПП
+              </span>
+            </div>
+          )}
         </div>
 
-        {!sidebarCollapsed && (
-          <div className="brand-text">
-            <strong>
-              MISHEEL
-            </strong>
-
-            <span>
-              GROUP
-            </span>
-          </div>
-        )}
-
         <button
-          className="sidebar-collapse-button"
           type="button"
+          className="sidebar-collapse-button"
           onClick={() =>
             setSidebarCollapsed(
               (value) =>
                 !value
             )
           }
+          title={
+            sidebarCollapsed
+              ? language === "mn"
+                ? "Sidebar нээх"
+                : "Open sidebar"
+              : language === "mn"
+                ? "Sidebar хаах"
+                : "Close sidebar"
+          }
         >
-          {sidebarCollapsed
-            ? "▶"
-            : "◀"}
+          {sidebarCollapsed ? (
+            <PanelRightOpen
+              size={18}
+              strokeWidth={2}
+            />
+          ) : (
+            <PanelLeftClose
+              size={18}
+              strokeWidth={2}
+            />
+          )}
         </button>
       </div>
 
       <nav className="side-nav">
-        {items.map(
-          (item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={
-                item.to === "/"
-              }
-              title={
-                language ===
-                "mn"
-                  ? item.mn
-                  : item.en
-              }
-              className={({
-                isActive
-              }) =>
-                `side-nav-item ${
+        {baseItems.map(
+          (item) => {
+            const Icon =
+              item.icon;
+
+            const label =
+              language === "mn"
+                ? item.mn
+                : item.en;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={
+                  item.to === "/"
+                }
+                title={
+                  sidebarCollapsed
+                    ? label
+                    : undefined
+                }
+                className={({
                   isActive
-                    ? "active"
-                    : ""
-                }`
-              }
-            >
-              {sidebarCollapsed
-                ? (
-                    language ===
-                    "mn"
-                      ? item.mn
-                      : item.en
-                  ).charAt(
-                    0
-                  )
-                : language ===
-                    "mn"
-                  ? item.mn
-                  : item.en}
-            </NavLink>
-          )
+                }) =>
+                  `side-nav-item ${
+                    isActive
+                      ? "active"
+                      : ""
+                  }`
+                }
+              >
+                <span className="side-nav-icon">
+                  <Icon
+                    size={18}
+                    strokeWidth={2}
+                  />
+                </span>
+
+                {!sidebarCollapsed && (
+                  <span className="side-nav-label">
+                    {label}
+                  </span>
+                )}
+              </NavLink>
+            );
+          }
         )}
       </nav>
 
-      <div className="sidebar-user-area">
+      <div className="sidebar-bottom">
+        {user?.role ===
+          "admin" && (
+          <NavLink
+            to="/users"
+            title={
+              sidebarCollapsed
+                ? language === "mn"
+                  ? "Тохиргоо"
+                  : "Settings"
+                : undefined
+            }
+            className={({
+              isActive
+            }) =>
+              `side-nav-item ${
+                isActive
+                  ? "active"
+                  : ""
+              }`
+            }
+          >
+            <span className="side-nav-icon">
+              <Settings
+                size={18}
+                strokeWidth={2}
+              />
+            </span>
+
+            {!sidebarCollapsed && (
+              <span className="side-nav-label">
+                {language === "mn"
+                  ? "Тохиргоо"
+                  : "Settings"}
+              </span>
+            )}
+          </NavLink>
+        )}
+
         {sidebarCollapsed ? (
           <button
             type="button"
-            className="sidebar-user-avatar-only"
-            onClick={
-              logout
-            }
+            className="sidebar-logout-collapsed"
+            onClick={logout}
             title={
-              language ===
-              "mn"
+              language === "mn"
                 ? "Гарах"
                 : "Logout"
             }
           >
-            {userInitial}
+            <LogOut
+              size={18}
+              strokeWidth={2}
+            />
           </button>
         ) : (
           <div className="sidebar-user-card">
-            <div className="sidebar-user-avatar">
-              {userInitial}
-            </div>
-
-            <div className="sidebar-user-details">
-              <strong>
-                {user?.email}
-              </strong>
-
-              <span>
-                {user?.role ===
-                "admin"
-                  ? language ===
-                    "mn"
-                    ? "Админ"
-                    : "Admin"
-                  : language ===
-                    "mn"
-                    ? "Viewer"
-                    : "Viewer"}
-              </span>
-            </div>
-
             <button
               type="button"
-              className="sidebar-user-logout"
-              onClick={
-                logout
-              }
-              title={
-                language ===
-                "mn"
-                  ? "Гарах"
-                  : "Logout"
-              }
+              className="sidebar-logout-button"
+              onClick={logout}
             >
-              ↪
+              <LogOut
+                size={17}
+                strokeWidth={2}
+              />
+
+              <span>
+                {language === "mn"
+                  ? "Гарах"
+                  : "Log out"}
+              </span>
             </button>
           </div>
         )}

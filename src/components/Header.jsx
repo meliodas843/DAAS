@@ -8,7 +8,7 @@ import { getBranches } from "../api/dashboardApi";
 
 const titles = {
   mn: {
-    "/": "Удирдлагын самбар",
+    "/": "Тохиргоо",
     "/receivables": "Авлага",
     "/payables": "Өглөг",
     "/revenue-expense": "Орлого / Зардал",

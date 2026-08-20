@@ -10,10 +10,22 @@ export default function AdminRoute({
 }) {
   const {
     user,
-    authenticated
+    authenticated,
+    loading
   } = useAuth();
 
-  if (!authenticated) {
+  if (loading) {
+    return (
+      <div className="page-loading">
+        Loading...
+      </div>
+    );
+  }
+
+  if (
+    !authenticated ||
+    !user
+  ) {
     return (
       <Navigate
         to="/login"
@@ -23,7 +35,20 @@ export default function AdminRoute({
   }
 
   if (
-    user?.role !==
+    user
+      .must_change_password ===
+    true
+  ) {
+    return (
+      <Navigate
+        to="/change-password"
+        replace
+      />
+    );
+  }
+
+  if (
+    user.role !==
     "admin"
   ) {
     return (

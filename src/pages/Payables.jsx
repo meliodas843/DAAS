@@ -20,6 +20,8 @@ export default function Payables() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       try {
         setLoading(true);
@@ -42,47 +44,100 @@ export default function Payables() {
           getPayableMonthly(filters)
         ]);
 
-        setAccounts(accountsData);
-        setChanges(changesData);
-        setBranches(branchesData);
-        setMonthly(monthlyData);
+        if (!mounted) {
+          return;
+        }
+
+        setAccounts(
+          Array.isArray(accountsData)
+            ? accountsData
+            : []
+        );
+
+        setChanges(
+          Array.isArray(changesData)
+            ? changesData
+            : []
+        );
+
+        setBranches(
+          Array.isArray(branchesData)
+            ? branchesData
+            : []
+        );
+
+        setMonthly(
+          Array.isArray(monthlyData)
+            ? monthlyData
+            : []
+        );
       } catch (err) {
         console.error(err);
-        setError(err.message);
+
+        if (mounted) {
+          setError(
+            err?.message ||
+              "Data load failed"
+          );
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="page-loading">
+        Loading...
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Backend error: {error}</div>;
+    return (
+      <div className="page-error">
+        Backend error: {error}
+      </div>
+    );
   }
 
   return (
     <div className="page-grid page-grid-2">
       <Card title="Өглөгийн дүн дансаар">
-        <HorizontalBarChart data={accounts} />
+        <HorizontalBarChart
+          data={accounts}
+        />
       </Card>
 
       <Card title="Сарын Өглөгийн Өөрчлөлт">
-        <ChangeBarChart data={changes} />
+        <ChangeBarChart
+          data={changes}
+        />
       </Card>
 
       <Card title="Өглөгийн дүн салбараар">
-        <HorizontalBarChart data={branches} green />
+        <HorizontalBarChart
+          data={branches}
+          color="#2966e8"
+        />
       </Card>
 
-      <Card title="Өглөгийн дүн сараар">
+      <Card
+        title="Өглөгийн дүн сараар"
+        className="monthly-card"
+      >
         <MonthlyBarChart
           data={monthly}
-          color="#afa0f4"
+          color="#a394eb"
         />
       </Card>
     </div>

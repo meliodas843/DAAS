@@ -1,6 +1,8 @@
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState
 } from "react";
@@ -11,8 +13,10 @@ const AuthContext =
 const TOKEN_KEY =
   "admin_token";
 
-const USER_KEY =
-  "admin_user";
+const API =
+  import.meta.env
+    .VITE_API_URL ||
+  "http://localhost:8000/api";
 
 export function AuthProvider({
   children
@@ -29,56 +33,90 @@ export function AuthProvider({
   const [
     user,
     setUser
-  ] = useState(() => {
-    try {
-      const value =
-        localStorage.getItem(
-          USER_KEY
-        );
+  ] = useState(null);
 
-      if (!value) {
-        return null;
-      }
+  const [
+    loading,
+    setLoading
+  ] = useState(
+    Boolean(token)
+  );
 
-      const parsed =
-        JSON.parse(value);
+  const clearAuth =
+    useCallback(() => {
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
 
-      return {
-        ...parsed,
-        must_change_password:
-          Boolean(
-            parsed
-              .must_change_password
-          )
-      };
-    } catch {
-      return null;
-    }
-  });
+      setToken(null);
+      setUser(null);
+    }, []);
+
+  const refreshUser =
+    useCallback(
+      async (
+        activeToken =
+          token
+      ) => {
+        if (!activeToken) {
+          setUser(null);
+          setLoading(false);
+          return null;
+        }
+
+        try {
+          const response =
+            await fetch(
+              `${API}/auth/me`,
+              {
+                headers: {
+                  Authorization:
+                    `Bearer ${activeToken}`
+                }
+              }
+            );
+
+          const data =
+            await response.json();
+
+          if (
+            !response.ok
+          ) {
+            clearAuth();
+            return null;
+          }
+
+          setUser(
+            data.user
+          );
+
+          return data.user;
+        } catch {
+          clearAuth();
+          return null;
+        } finally {
+          setLoading(false);
+        }
+      },
+      [
+        token,
+        clearAuth
+      ]
+    );
+
+  useEffect(() => {
+    refreshUser();
+  }, [
+    refreshUser
+  ]);
 
   function login(
     nextToken,
     nextUser
   ) {
-    const normalizedUser = {
-      ...nextUser,
-      must_change_password:
-        Boolean(
-          nextUser
-            ?.must_change_password
-        )
-    };
-
     localStorage.setItem(
       TOKEN_KEY,
       nextToken
-    );
-
-    localStorage.setItem(
-      USER_KEY,
-      JSON.stringify(
-        normalizedUser
-      )
     );
 
     setToken(
@@ -86,21 +124,38 @@ export function AuthProvider({
     );
 
     setUser(
-      normalizedUser
+      nextUser ||
+        null
     );
+
+    setLoading(false);
   }
 
-  function logout() {
-    localStorage.removeItem(
-      TOKEN_KEY
-    );
+  async function logout() {
+    const currentToken =
+      token;
 
-    localStorage.removeItem(
-      USER_KEY
-    );
+    clearAuth();
 
-    setToken(null);
-    setUser(null);
+    if (
+      !currentToken
+    ) {
+      return;
+    }
+
+    try {
+      await fetch(
+        `${API}/auth/logout`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${currentToken}`
+          }
+        }
+      );
+    } catch {
+    }
   }
 
   const value =
@@ -108,17 +163,21 @@ export function AuthProvider({
       () => ({
         token,
         user,
+        loading,
         authenticated:
           Boolean(
             token &&
               user
           ),
         login,
-        logout
+        logout,
+        refreshUser
       }),
       [
         token,
-        user
+        user,
+        loading,
+        refreshUser
       ]
     );
 

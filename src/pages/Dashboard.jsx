@@ -12,7 +12,11 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import Card from "../components/Card";
 import KpiCard from "../components/KpiCard";
 import AgingDonut from "../components/AgingDonut";
@@ -24,7 +28,9 @@ import {
   getReceivableAging,
   getRevenueMonthly
 } from "../api/dashboardApi";
-import { useDashboard } from "../context/DashboardContext";
+import {
+  useDashboard
+} from "../context/DashboardContext";
 import {
   getDashboardFilters,
   getMonthlyFilters
@@ -35,22 +41,151 @@ import {
   formatTooltipMoney
 } from "../utils/formatters";
 
-function CollectionChart({ data }) {
-  const safeData = Array.isArray(data)
-    ? data.map((item) => ({
-        ...item,
-        month: formatMonth(item.month),
-        value: Number(item.value || 0)
-      }))
-    : [];
+function normalizeMonth(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "";
+  }
 
-  const maxValue = Math.max(
-    20,
-    ...safeData.map((item) => item.value)
+  const formatted =
+    formatMonth(value);
+
+  if (formatted) {
+    const formattedText =
+      String(formatted)
+        .trim()
+        .replace(/-/g, "/");
+
+    const formattedMatch =
+      formattedText.match(
+        /(\d{4})\/(\d{1,2})/
+      );
+
+    if (formattedMatch) {
+      return `${formattedMatch[1]}/${String(
+        formattedMatch[2]
+      ).padStart(2, "0")}`;
+    }
+  }
+
+  const text =
+    String(value)
+      .trim()
+      .replace(/-/g, "/");
+
+  const match =
+    text.match(
+      /(\d{4})\/(\d{1,2})/
+    );
+
+  if (match) {
+    return `${match[1]}/${String(
+      match[2]
+    ).padStart(2, "0")}`;
+  }
+
+  return text;
+}
+
+function getPreviousMonthKey(
+  monthKey
+) {
+  if (!monthKey) {
+    return "";
+  }
+
+  const match =
+    monthKey.match(
+      /^(\d{4})\/(\d{2})$/
+    );
+
+  if (!match) {
+    return "";
+  }
+
+  const year =
+    Number(match[1]);
+
+  const month =
+    Number(match[2]);
+
+  const date =
+    new Date(
+      year,
+      month - 2,
+      1
+    );
+
+  return `${date.getFullYear()}/${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}`;
+}
+
+function findMonthRow(
+  rows,
+  monthKey
+) {
+  if (
+    !Array.isArray(rows) ||
+    rows.length === 0
+  ) {
+    return null;
+  }
+
+  if (!monthKey) {
+    return rows[
+      rows.length - 1
+    ];
+  }
+
+  return (
+    rows.find(
+      (item) =>
+        normalizeMonth(
+          item?.month
+        ) === monthKey
+    ) || null
   );
+}
+
+function CollectionChart({
+  data
+}) {
+  const safeData =
+    Array.isArray(data)
+      ? data.map(
+          (item) => ({
+            ...item,
+            month:
+              formatMonth(
+                item.month
+              ),
+            value:
+              Number(
+                item.value || 0
+              )
+          })
+        )
+      : [];
+
+  const maxValue =
+    Math.max(
+      20,
+      ...safeData.map(
+        (item) =>
+          item.value
+      )
+    );
 
   const yMax =
-    Math.ceil(maxValue / 10) * 10 + 10;
+    Math.ceil(
+      maxValue / 10
+    ) *
+      10 +
+    10;
 
   return (
     <div className="dashboard-chart collection-chart">
@@ -84,21 +219,30 @@ function CollectionChart({ data }) {
           />
 
           <YAxis
-            domain={[0, yMax]}
+            domain={[
+              0,
+              yMax
+            ]}
             axisLine={false}
             tickLine={false}
             tick={{
               fill: "#8796ad",
               fontSize: 10
             }}
-            tickFormatter={(value) =>
+            tickFormatter={(
+              value
+            ) =>
               `${value}%`
             }
           />
 
           <Tooltip
-            formatter={(value) => [
-              `${Number(value || 0).toFixed(1)}%`,
+            formatter={(
+              value
+            ) => [
+              `${Number(
+                value || 0
+              ).toFixed(1)}%`,
               "Цуглуулалт"
             ]}
           />
@@ -108,9 +252,12 @@ function CollectionChart({ data }) {
             stroke="#ff6423"
             strokeDasharray="5 4"
             label={{
-              value: "Зорилт 20%",
-              position: "insideTopRight",
-              fill: "#ff6423",
+              value:
+                "Зорилт 20%",
+              position:
+                "insideTopRight",
+              fill:
+                "#ff6423",
               fontSize: 10,
               fontWeight: 700
             }}
@@ -130,12 +277,16 @@ function CollectionChart({ data }) {
                 index
               } = props;
 
-              const value = Number(
-                payload?.value || 0
-              );
+              const value =
+                Number(
+                  payload?.value ||
+                    0
+                );
 
               return (
-                <g key={index}>
+                <g
+                  key={index}
+                >
                   <circle
                     cx={cx}
                     cy={cy}
@@ -157,7 +308,10 @@ function CollectionChart({ data }) {
                     fontSize="10"
                     fontWeight="700"
                   >
-                    {value.toFixed(1)}%
+                    {value.toFixed(
+                      1
+                    )}
+                    %
                   </text>
                 </g>
               );
@@ -169,16 +323,112 @@ function CollectionChart({ data }) {
   );
 }
 
-function FinancialChart({ data }) {
-  const safeData = Array.isArray(data)
-    ? data.map((item) => ({
-        ...item,
-        month: formatMonth(item.month),
-        revenue: Number(item.revenue || 0),
-        expense: Number(item.expense || 0),
-        profit: Number(item.profit || 0)
-      }))
-    : [];
+function FinancialChart({
+  data
+}) {
+  const safeData =
+    Array.isArray(data)
+      ? data.map(
+          (item) => ({
+            ...item,
+            month:
+              formatMonth(
+                item.month
+              ),
+            revenue:
+              Number(
+                item.revenue ||
+                  0
+              ),
+            expense:
+              Number(
+                item.expense ||
+                  0
+              ),
+            profit:
+              Number(
+                item.profit ||
+                  0
+              )
+          })
+        )
+      : [];
+
+  const RevenueLabel = ({
+    x = 0,
+    y = 0,
+    width = 0,
+    value
+  }) => {
+    const number =
+      Number(value || 0);
+
+    if (
+      !Number.isFinite(
+        number
+      ) ||
+      number === 0
+    ) {
+      return null;
+    }
+
+    return (
+      <text
+        x={
+          x +
+          width / 2 -
+          6
+        }
+        y={y - 8}
+        textAnchor="middle"
+        fill="#101827"
+        fontSize={9}
+        fontWeight={700}
+      >
+        {formatMoney(
+          number
+        )}
+      </text>
+    );
+  };
+
+  const ExpenseLabel = ({
+    x = 0,
+    y = 0,
+    width = 0,
+    value
+  }) => {
+    const number =
+      Number(value || 0);
+
+    if (
+      !Number.isFinite(
+        number
+      ) ||
+      number === 0
+    ) {
+      return null;
+    }
+
+    return (
+      <text
+        x={
+          x +
+          width / 2 +
+          6
+        }
+        y={y - 8}
+        textAnchor="middle"
+        fill="#101827"
+        fontSize={9}
+        fontWeight={700}
+      >
+        {formatMoney(
+          number
+        )}
+      </text>
+    );
+  };
 
   return (
     <div className="dashboard-chart">
@@ -189,11 +439,13 @@ function FinancialChart({ data }) {
         <BarChart
           data={safeData}
           margin={{
-            top: 30,
+            top: 34,
             left: 0,
-            right: 15,
+            right: 18,
             bottom: 5
           }}
+          barGap={12}
+          barCategoryGap="28%"
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -205,6 +457,7 @@ function FinancialChart({ data }) {
             dataKey="month"
             axisLine={false}
             tickLine={false}
+            tickMargin={8}
             tick={{
               fill: "#8796ad",
               fontSize: 10
@@ -218,14 +471,23 @@ function FinancialChart({ data }) {
               fill: "#8796ad",
               fontSize: 10
             }}
-            tickFormatter={(value) =>
-              formatMoney(value)
+            tickFormatter={(
+              value
+            ) =>
+              formatMoney(
+                value
+              )
             }
           />
 
           <Tooltip
-            formatter={(value, name) => [
-              formatTooltipMoney(value),
+            formatter={(
+              value,
+              name
+            ) => [
+              formatTooltipMoney(
+                value
+              ),
               name
             ]}
           />
@@ -236,20 +498,22 @@ function FinancialChart({ data }) {
             name="Орлого"
             dataKey="revenue"
             fill="#2164e8"
-            barSize={16}
-            radius={[3, 3, 0, 0]}
+            barSize={13}
+            radius={[
+              3,
+              3,
+              0,
+              0
+            ]}
+            isAnimationActive={
+              false
+            }
           >
             <LabelList
               dataKey="revenue"
-              position="top"
-              formatter={(value) =>
-                formatMoney(value)
+              content={
+                <RevenueLabel />
               }
-              style={{
-                fill: "#101827",
-                fontSize: 9,
-                fontWeight: 700
-              }}
             />
           </Bar>
 
@@ -257,20 +521,22 @@ function FinancialChart({ data }) {
             name="Зардал"
             dataKey="expense"
             fill="#75b9ff"
-            barSize={16}
-            radius={[3, 3, 0, 0]}
+            barSize={13}
+            radius={[
+              3,
+              3,
+              0,
+              0
+            ]}
+            isAnimationActive={
+              false
+            }
           >
             <LabelList
               dataKey="expense"
-              position="top"
-              formatter={(value) =>
-                formatMoney(value)
+              content={
+                <ExpenseLabel />
               }
-              style={{
-                fill: "#101827",
-                fontSize: 9,
-                fontWeight: 700
-              }}
             />
           </Bar>
 
@@ -284,6 +550,9 @@ function FinancialChart({ data }) {
               r: 4,
               fill: "#f15b16"
             }}
+            isAnimationActive={
+              false
+            }
           />
         </BarChart>
       </ResponsiveContainer>
@@ -297,8 +566,13 @@ function MiniStat({
 }) {
   return (
     <div className="mini-stat">
-      <strong>{value}</strong>
-      <p>{label}</p>
+      <strong>
+        {value}
+      </strong>
+
+      <p>
+        {label}
+      </p>
     </div>
   );
 }
@@ -309,7 +583,10 @@ export default function Dashboard() {
     selectedBranch
   } = useDashboard();
 
-  const [kpis, setKpis] = useState({
+  const [
+    kpis,
+    setKpis
+  ] = useState({
     revenue: 0,
     revenue_previous: 0,
     revenue_change: 0,
@@ -327,13 +604,15 @@ export default function Dashboard() {
     net_profit_change: 0
   });
 
-  const [areaStats, setAreaStats] =
-    useState({
-      rented: 0,
-      total: 0,
-      vacant: 0,
-      utilization: 0
-    });
+  const [
+    areaStats,
+    setAreaStats
+  ] = useState({
+    rented: 0,
+    total: 0,
+    vacant: 0,
+    utilization: 0
+  });
 
   const [
     collectionMonthly,
@@ -355,11 +634,15 @@ export default function Dashboard() {
     setPayableAging
   ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [
+    error,
+    setError
+  ] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -387,31 +670,38 @@ export default function Dashboard() {
           revenueData,
           receivableAgingData,
           payableAgingData
-        ] = await Promise.all([
-          getKpis(filters),
-          getAreaStats(filters),
-          getCollectionRate(
-            monthlyFilters
-          ),
-          getRevenueMonthly(
-            monthlyFilters
-          ),
-          getReceivableAging(
-            filters
-          ),
-          getPayableAging(
-            filters
-          )
-        ]);
+        ] =
+          await Promise.all([
+            getKpis(
+              filters
+            ),
+            getAreaStats(
+              filters
+            ),
+            getCollectionRate(
+              monthlyFilters
+            ),
+            getRevenueMonthly(
+              monthlyFilters
+            ),
+            getReceivableAging(
+              filters
+            ),
+            getPayableAging(
+              filters
+            )
+          ]);
 
         if (!mounted) {
           return;
         }
 
         setKpis({
-          revenue: Number(
-            kpiData?.revenue || 0
-          ),
+          revenue:
+            Number(
+              kpiData?.revenue ||
+                0
+            ),
 
           revenue_previous:
             Number(
@@ -425,9 +715,11 @@ export default function Dashboard() {
                 0
             ),
 
-          expense: Number(
-            kpiData?.expense || 0
-          ),
+          expense:
+            Number(
+              kpiData?.expense ||
+                0
+            ),
 
           expense_previous:
             Number(
@@ -441,9 +733,11 @@ export default function Dashboard() {
                 0
             ),
 
-          receivable: Number(
-            kpiData?.receivable || 0
-          ),
+          receivable:
+            Number(
+              kpiData?.receivable ||
+                0
+            ),
 
           receivable_previous:
             Number(
@@ -457,9 +751,11 @@ export default function Dashboard() {
                 0
             ),
 
-          payable: Number(
-            kpiData?.payable || 0
-          ),
+          payable:
+            Number(
+              kpiData?.payable ||
+                0
+            ),
 
           payable_previous:
             Number(
@@ -473,9 +769,11 @@ export default function Dashboard() {
                 0
             ),
 
-          net_profit: Number(
-            kpiData?.net_profit || 0
-          ),
+          net_profit:
+            Number(
+              kpiData?.net_profit ||
+                0
+            ),
 
           net_profit_previous:
             Number(
@@ -491,21 +789,29 @@ export default function Dashboard() {
         });
 
         setAreaStats({
-          rented: Number(
-            areaData?.rented || 0
-          ),
+          rented:
+            Number(
+              areaData?.rented ||
+                0
+            ),
 
-          total: Number(
-            areaData?.total || 0
-          ),
+          total:
+            Number(
+              areaData?.total ||
+                0
+            ),
 
-          vacant: Number(
-            areaData?.vacant || 0
-          ),
+          vacant:
+            Number(
+              areaData?.vacant ||
+                0
+            ),
 
-          utilization: Number(
-            areaData?.utilization || 0
-          )
+          utilization:
+            Number(
+              areaData?.utilization ||
+                0
+            )
         });
 
         setCollectionMonthly(
@@ -568,31 +874,115 @@ export default function Dashboard() {
     selectedBranch
   ]);
 
-  const latestCollection =
+  const selectedMonthKey =
     useMemo(() => {
       if (
-        collectionMonthly.length === 0
+        !selectedMonth ||
+        selectedMonth === "all" ||
+        selectedMonth === "Бүгд" ||
+        selectedMonth === "БҮГД"
       ) {
-        return null;
+        return "";
       }
 
-      return collectionMonthly[
-        collectionMonthly.length - 1
-      ];
-    }, [collectionMonthly]);
+      return normalizeMonth(
+        selectedMonth
+      );
+    }, [
+      selectedMonth
+    ]);
+
+  const selectedCollection =
+    useMemo(() => {
+      return findMonthRow(
+        collectionMonthly,
+        selectedMonthKey
+      );
+    }, [
+      collectionMonthly,
+      selectedMonthKey
+    ]);
 
   const previousCollection =
     useMemo(() => {
       if (
-        collectionMonthly.length < 2
+        collectionMonthly.length ===
+        0
       ) {
         return null;
       }
 
-      return collectionMonthly[
-        collectionMonthly.length - 2
-      ];
-    }, [collectionMonthly]);
+      if (!selectedMonthKey) {
+        if (
+          collectionMonthly.length <
+          2
+        ) {
+          return null;
+        }
+
+        return collectionMonthly[
+          collectionMonthly.length -
+            2
+        ];
+      }
+
+      const previousMonthKey =
+        getPreviousMonthKey(
+          selectedMonthKey
+        );
+
+      return findMonthRow(
+        collectionMonthly,
+        previousMonthKey
+      );
+    }, [
+      collectionMonthly,
+      selectedMonthKey
+    ]);
+
+  const selectedFinancial =
+    useMemo(() => {
+      return findMonthRow(
+        incomeExpenseMonthly,
+        selectedMonthKey
+      );
+    }, [
+      incomeExpenseMonthly,
+      selectedMonthKey
+    ]);
+
+  const collectionCurrentValue =
+    Number(
+      selectedCollection?.value ??
+        0
+    );
+
+  const collectionPreviousValue =
+    Number(
+      previousCollection?.value ??
+        0
+    );
+
+  const selectedRevenue =
+    Number(
+      selectedFinancial?.revenue ??
+        0
+    );
+
+  const selectedExpense =
+    Number(
+      selectedFinancial?.expense ??
+        0
+    );
+
+  const selectedProfit =
+    Number(
+      selectedFinancial?.profit ??
+        (
+          selectedRevenue -
+          selectedExpense
+        )
+    );
 
   const missedTargetCount =
     useMemo(
@@ -603,23 +993,10 @@ export default function Dashboard() {
               item.value || 0
             ) < 20
         ).length,
-      [collectionMonthly]
+      [
+        collectionMonthly
+      ]
     );
-
-  const latestFinancial =
-    useMemo(() => {
-      if (
-        incomeExpenseMonthly.length ===
-        0
-      ) {
-        return null;
-      }
-
-      return incomeExpenseMonthly[
-        incomeExpenseMonthly.length -
-          1
-      ];
-    }, [incomeExpenseMonthly]);
 
   if (loading) {
     return (
@@ -635,7 +1012,8 @@ export default function Dashboard() {
     return (
       <div className="dashboard-page">
         <div className="page-error">
-          Backend error: {error}
+          Backend error:{" "}
+          {error}
         </div>
       </div>
     );
@@ -645,7 +1023,9 @@ export default function Dashboard() {
     <div className="dashboard-page">
       <div className="dashboard-kpis">
         <KpiCard
-          value={kpis.revenue}
+          value={
+            kpis.revenue
+          }
           previousValue={
             kpis.revenue_previous
           }
@@ -656,7 +1036,9 @@ export default function Dashboard() {
         />
 
         <KpiCard
-          value={kpis.expense}
+          value={
+            kpis.expense
+          }
           previousValue={
             kpis.expense_previous
           }
@@ -668,7 +1050,9 @@ export default function Dashboard() {
         />
 
         <KpiCard
-          value={kpis.receivable}
+          value={
+            kpis.receivable
+          }
           previousValue={
             kpis.receivable_previous
           }
@@ -680,7 +1064,9 @@ export default function Dashboard() {
         />
 
         <KpiCard
-          value={kpis.payable}
+          value={
+            kpis.payable
+          }
           previousValue={
             kpis.payable_previous
           }
@@ -691,7 +1077,9 @@ export default function Dashboard() {
         />
 
         <KpiCard
-          value={kpis.net_profit}
+          value={
+            kpis.net_profit
+          }
           previousValue={
             kpis.net_profit_previous
           }
@@ -703,33 +1091,32 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="dashboard-main-row">
+      <div className="dashboard-summary-row">
         <Card
           title="Авлага цуглуулалтын хувь сараар"
-          className="collection-card"
+          className="collection-card dashboard-summary-collection"
         >
           <CollectionChart
-            data={collectionMonthly}
+            data={
+              collectionMonthly
+            }
           />
 
           <div className="chart-summary">
             Энэ сар:{" "}
             <strong>
-              {Number(
-                latestCollection?.value ||
-                  0
-              ).toFixed(1)}
+              {collectionCurrentValue.toFixed(
+                1
+              )}
               %
             </strong>{" "}
             (өмнөх:{" "}
-            {Number(
-              previousCollection?.value ||
-                0
-            ).toFixed(1)}
+            {collectionPreviousValue.toFixed(
+              1
+            )}
             %) ·{" "}
             <span>
-              ⚠ Зорилт 20%-д
-              хүрээгүй:{" "}
+              ⚠ Зорилт 20%-д хүрээгүй:{" "}
               {missedTargetCount}/
               {collectionMonthly.length}{" "}
               сар
@@ -737,10 +1124,11 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <div className="mini-stats-column">
+        <div className="mini-stats-column dashboard-summary-stats">
           <MiniStat
             value={Number(
-              areaStats.rented || 0
+              areaStats.rented ||
+                0
             ).toLocaleString(
               "en-US"
             )}
@@ -757,7 +1145,8 @@ export default function Dashboard() {
 
           <MiniStat
             value={Number(
-              areaStats.vacant || 0
+              areaStats.vacant ||
+                0
             ).toLocaleString(
               "en-US"
             )}
@@ -767,10 +1156,12 @@ export default function Dashboard() {
 
         <Card
           title="Авлагын насжилт"
-          className="aging-card"
+          className="aging-card dashboard-summary-aging"
         >
           <AgingDonut
-            data={receivableAging}
+            data={
+              receivableAging
+            }
             previous=""
           />
         </Card>
@@ -791,33 +1182,27 @@ export default function Dashboard() {
             Энэ сар: Орлого{" "}
             <strong>
               {formatMoney(
-                latestFinancial?.revenue ||
-                  0,
+                selectedRevenue,
                 true
               )}
             </strong>{" "}
             / Зардал{" "}
             <strong>
               {formatMoney(
-                latestFinancial?.expense ||
-                  0,
+                selectedExpense,
                 true
               )}
             </strong>{" "}
             · Ашиг:{" "}
             <strong
               className={
-                Number(
-                  latestFinancial?.profit ||
-                    0
-                ) < 0
+                selectedProfit < 0
                   ? "negative-money"
                   : ""
               }
             >
               {formatMoney(
-                latestFinancial?.profit ||
-                  0,
+                selectedProfit,
                 true
               )}
             </strong>
@@ -829,7 +1214,9 @@ export default function Dashboard() {
           className="aging-card"
         >
           <AgingDonut
-            data={payableAging}
+            data={
+              payableAging
+            }
             previous=""
           />
         </Card>

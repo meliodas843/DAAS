@@ -16,7 +16,9 @@ import cashFlowRouter from "./routes/cashFlow.js";
 import branchesRouter from "./routes/branches.js";
 
 import {
-  requireAuth
+  requireAuth,
+  requirePasswordChanged,
+  requireFinancialAccess
 } from "./middleware/auth.js";
 
 const app =
@@ -28,44 +30,48 @@ const PORT =
       8000
   );
 
+app.disable(
+  "x-powered-by"
+);
+
 app.use(
   cors({
     origin:
+      process.env.FRONTEND_URL ||
       "http://localhost:5173",
     credentials: true
   })
 );
 
 app.use(
-  express.json()
+  express.json({
+    limit: "100kb"
+  })
 );
 
 app.get(
   "/api/health",
   async (req, res) => {
     try {
-      const result =
-        await pool.query(
-          `
-          SELECT
-            NOW() AS time,
-            current_database() AS database
-          `
-        );
+      await pool.query(
+        "SELECT 1"
+      );
 
       return res.json({
         success: true,
-        connected: true,
-        database:
-          result.rows[0].database,
-        time:
-          result.rows[0].time
+        connected: true
       });
     } catch (error) {
+      console.error(
+        "HEALTH ERROR:",
+        error
+      );
+
       return res.status(500).json({
         success: false,
         connected: false,
-        message: error.message
+        message:
+          "Database unavailable"
       });
     }
   }
@@ -76,45 +82,51 @@ app.use(
   authRouter
 );
 
+const financialGuards = [
+  requireAuth,
+  requirePasswordChanged,
+  requireFinancialAccess
+];
+
 app.use(
   "/api",
-  requireAuth,
+  ...financialGuards,
   kpisRouter
 );
 
 app.use(
   "/api",
-  requireAuth,
+  ...financialGuards,
   dashboardRouter
 );
 
 app.use(
   "/api/ar",
-  requireAuth,
+  ...financialGuards,
   receivablesRouter
 );
 
 app.use(
   "/api/ap",
-  requireAuth,
+  ...financialGuards,
   payablesRouter
 );
 
 app.use(
   "/api",
-  requireAuth,
+  ...financialGuards,
   revenueExpenseRouter
 );
 
 app.use(
   "/api/cash-flow",
-  requireAuth,
+  ...financialGuards,
   cashFlowRouter
 );
 
 app.use(
   "/api",
-  requireAuth,
+  ...financialGuards,
   branchesRouter
 );
 
@@ -130,13 +142,30 @@ app.get(
 );
 
 app.use(
-  (error, req, res, next) => {
-    console.error(error);
+  (req, res) => {
+    return res.status(404).json({
+      success: false,
+      message:
+        "Not found"
+    });
+  }
+);
+
+app.use(
+  (
+    error,
+    req,
+    res,
+    next
+  ) => {
+    console.error(
+      "UNHANDLED ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message:
-        error.message ||
         "Internal server error"
     });
   }

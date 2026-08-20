@@ -1,100 +1,354 @@
 import {
-  formatMoney,
-  formatPercent
+  ArrowDown,
+  ArrowUp,
+  Minus,
+  TrendingUp
+} from "lucide-react";
+import {
+  formatMoney
 } from "../utils/formatters";
+
+function formatDifference(value) {
+  const number = Number(value || 0);
+  const absolute = Math.abs(number);
+
+  if (absolute >= 1_000_000_000) {
+    const result =
+      absolute / 1_000_000_000;
+
+    return `₮${
+      result >= 10
+        ? result.toFixed(1)
+        : result.toFixed(2)
+    }bn`;
+  }
+
+  if (absolute >= 1_000_000) {
+    const result =
+      absolute / 1_000_000;
+
+    return `₮${
+      result >= 10
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }M`;
+  }
+
+  if (absolute >= 1_000) {
+    const result =
+      absolute / 1_000;
+
+    return `₮${
+      result >= 10
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }K`;
+  }
+
+  return `₮${Math.round(
+    absolute
+  ).toLocaleString("en-US")}`;
+}
+
+function getCalculatedChange(
+  current,
+  previous
+) {
+  const currentNumber =
+    Number(current);
+
+  const previousNumber =
+    Number(previous);
+
+  if (
+    !Number.isFinite(currentNumber) ||
+    !Number.isFinite(previousNumber)
+  ) {
+    return 0;
+  }
+
+  if (previousNumber === 0) {
+    return 0;
+  }
+
+  return (
+    ((currentNumber -
+      previousNumber) /
+      Math.abs(
+        previousNumber
+      )) *
+    100
+  );
+}
+
+function normalizeChange(
+  change,
+  current,
+  previous
+) {
+  const backendChange =
+    Number(change);
+
+  if (
+    Number.isFinite(backendChange) &&
+    Math.abs(backendChange) <= 1000
+  ) {
+    return backendChange;
+  }
+
+  return getCalculatedChange(
+    current,
+    previous
+  );
+}
+
+function formatChangePercent(value) {
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number)
+  ) {
+    return "0.0%";
+  }
+
+  return `${Math.abs(
+    number
+  ).toFixed(1)}%`;
+}
 
 export default function KpiCard({
   value = 0,
   previousValue = 0,
   label = "",
-  change = 0,
-  inverse = false,
-  warning = false
+  change = null,
+  warning = false,
+  icon = null,
+  target = null
 }) {
-  const current = Number(value);
-  const previous = Number(previousValue);
-  const changeNumber = Number(change);
+  const currentNumber =
+    Number(value);
+
+  const previousNumber =
+    Number(previousValue);
 
   const safeCurrent =
-    Number.isFinite(current)
-      ? current
+    Number.isFinite(
+      currentNumber
+    )
+      ? currentNumber
       : 0;
 
   const safePrevious =
-    Number.isFinite(previous)
-      ? previous
+    Number.isFinite(
+      previousNumber
+    )
+      ? previousNumber
       : 0;
 
-  const safeChange =
-    Number.isFinite(changeNumber)
-      ? changeNumber
-      : 0;
+  const difference =
+    safeCurrent -
+    safePrevious;
 
   const increased =
-    safeChange > 0;
+    difference > 0;
 
   const decreased =
-    safeChange < 0;
+    difference < 0;
 
-  let positive;
+  const unchanged =
+    difference === 0;
 
-  if (safeChange === 0) {
-    positive = false;
-  } else if (inverse) {
-    positive = decreased;
-  } else {
-    positive = increased;
-  }
+  const movementClass =
+    unchanged
+      ? "neutral"
+      : increased
+        ? "positive"
+        : "negative";
+
+  const safeChange =
+    normalizeChange(
+      change,
+      safeCurrent,
+      safePrevious
+    );
+
+  const targetNumber =
+    Number(target);
+
+  const hasTarget =
+    target !== null &&
+    target !== undefined &&
+    Number.isFinite(
+      targetNumber
+    ) &&
+    targetNumber > 0;
+
+  const progress =
+    hasTarget
+      ? Math.min(
+          Math.max(
+            (safeCurrent /
+              targetNumber) *
+              100,
+            0
+          ),
+          100
+        )
+      : 0;
+
+  const Icon =
+    icon || TrendingUp;
 
   return (
     <div
       className={`kpi-card ${
-        warning ? "warning" : ""
+        warning
+          ? "warning"
+          : ""
       }`}
     >
+      <div className="kpi-card-top">
+        <div className="kpi-card-title">
+          <span className="kpi-card-title-icon">
+            <Icon
+              size={16}
+              strokeWidth={2.1}
+            />
+          </span>
+
+          <span className="kpi-card-title-text">
+            {label}
+          </span>
+        </div>
+
+        <div
+          className={`kpi-change-badge ${movementClass}`}
+        >
+          {unchanged ? (
+            <Minus
+              size={13}
+              strokeWidth={3}
+            />
+          ) : increased ? (
+            <ArrowUp
+              size={13}
+              strokeWidth={3}
+            />
+          ) : (
+            <ArrowDown
+              size={13}
+              strokeWidth={3}
+            />
+          )}
+
+          <span>
+            {formatChangePercent(
+              safeChange
+            )}
+          </span>
+        </div>
+      </div>
+
+      <div className="kpi-card-body">
+        <div
+          className={`kpi-value ${
+            safeCurrent < 0
+              ? "negative-money"
+              : ""
+          }`}
+        >
+          {formatMoney(
+            safeCurrent,
+            true
+          )}
+        </div>
+
+        <div className="kpi-previous">
+          {formatMoney(
+            safePrevious,
+            true
+          )}{" "}
+          өмнөх сар
+        </div>
+      </div>
+
       <div
-        className={`kpi-value ${
-          safeCurrent < 0
-            ? "negative-money"
-            : ""
-        }`}
+        className={`kpi-mini-trend ${movementClass}`}
       >
-        {formatMoney(
-          safeCurrent,
-          true
+        <svg
+          viewBox="0 0 100 38"
+          preserveAspectRatio="none"
+        >
+          <path
+            className="kpi-mini-trend-fill"
+            d={
+              decreased
+                ? "M2 8 C12 9 18 14 27 13 C38 11 45 19 54 18 C64 17 70 24 80 23 C88 23 94 29 98 30 L98 38 L2 38 Z"
+                : unchanged
+                  ? "M2 20 C17 20 32 20 49 20 C66 20 82 20 98 20 L98 38 L2 38 Z"
+                  : "M2 28 C13 25 19 23 28 27 C39 31 45 20 55 21 C66 23 72 14 82 15 C89 15 94 10 98 7 L98 38 L2 38 Z"
+            }
+          />
+
+          <path
+            className="kpi-mini-trend-line"
+            d={
+              decreased
+                ? "M2 8 C12 9 18 14 27 13 C38 11 45 19 54 18 C64 17 70 24 80 23 C88 23 94 29 98 30"
+                : unchanged
+                  ? "M2 20 C17 20 32 20 49 20 C66 20 82 20 98 20"
+                  : "M2 28 C13 25 19 23 28 27 C39 31 45 20 55 21 C66 23 72 14 82 15 C89 15 94 10 98 7"
+            }
+          />
+        </svg>
+      </div>
+
+      <div
+        className={`kpi-difference ${movementClass}`}
+      >
+        {unchanged ? (
+          "Өөрчлөлтгүй"
+        ) : (
+          <>
+            {increased
+              ? "+"
+              : "-"}
+            {formatDifference(
+              difference
+            )}{" "}
+            {increased
+              ? "өссөн"
+              : "буурсан"}
+          </>
         )}
       </div>
 
-      <div className="kpi-previous">
-        {formatMoney(
-          safePrevious,
-          true
-        )}{" "}
-        өмнөх сар
-      </div>
+      {hasTarget && (
+        <div className="kpi-progress-section">
+          <div className="kpi-progress-header">
+            <span>
+              Зорилт
+            </span>
 
-      <div className="kpi-label">
-        {label}
-      </div>
+            <strong>
+              {Math.round(
+                progress
+              )}
+              %
+            </strong>
+          </div>
 
-      <div
-        className={`kpi-change ${
-          safeChange === 0
-            ? "neutral"
-            : positive
-              ? "positive"
-              : "negative"
-        }`}
-      >
-        {increased
-          ? "▲"
-          : decreased
-            ? "▼"
-            : "•"}{" "}
-        {formatPercent(
-          safeChange
-        )}
-      </div>
+          <div className="kpi-progress-track">
+            <div
+              className="kpi-progress-bar"
+              style={{
+                width: `${progress}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,8 @@ import {
 } from "../context/AuthContext";
 
 const API =
-  import.meta.env.VITE_API_URL ||
+  import.meta.env
+    .VITE_API_URL ||
   "http://localhost:8000/api";
 
 export default function ChangePassword() {
@@ -21,6 +22,11 @@ export default function ChangePassword() {
     user,
     login
   } = useAuth();
+
+  const [
+    currentPassword,
+    setCurrentPassword
+  ] = useState("");
 
   const [
     password,
@@ -48,10 +54,21 @@ export default function ChangePassword() {
     event.preventDefault();
 
     if (
-      password.length < 8
+      !currentPassword
     ) {
       setError(
-        "Нууц үг хамгийн багадаа 8 тэмдэгт байна"
+        "Одоогийн нууц үгээ оруулна уу"
+      );
+
+      return;
+    }
+
+    if (
+      password.length <
+      10
+    ) {
+      setError(
+        "Нууц үг хамгийн багадаа 10 тэмдэгт байна"
       );
 
       return;
@@ -85,6 +102,8 @@ export default function ChangePassword() {
             },
             body:
               JSON.stringify({
+                current_password:
+                  currentPassword,
                 new_password:
                   password,
                 confirm_password:
@@ -96,7 +115,9 @@ export default function ChangePassword() {
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           data?.message ||
             "Нууц үг шинэчлэхэд алдаа гарлаа"
@@ -105,16 +126,15 @@ export default function ChangePassword() {
 
       login(
         data.token,
-        {
-          ...data.user,
-          must_change_password:
-            false
-        }
+        data.user
       );
 
-      navigate("/", {
-        replace: true
-      });
+      navigate(
+        "/",
+        {
+          replace: true
+        }
+      );
     } catch (err) {
       setError(
         err?.message ||
@@ -128,22 +148,6 @@ export default function ChangePassword() {
   return (
     <div className="login-page">
       <div className="login-panel">
-        <div className="login-brand">
-          <div className="login-brand-icon">
-            M
-          </div>
-
-          <div>
-            <strong>
-              MISHEEL
-            </strong>
-
-            <span>
-              GROUP
-            </span>
-          </div>
-        </div>
-
         <form
           className="login-form"
           onSubmit={
@@ -155,7 +159,7 @@ export default function ChangePassword() {
           </h1>
 
           <p>
-            Анхны нэвтрэлт тул шинэ нууц үг үүсгэнэ үү.
+            Нууц үгээ шинэчилнэ үү.
           </p>
 
           <div className="change-password-email">
@@ -167,6 +171,27 @@ export default function ChangePassword() {
               {error}
             </div>
           )}
+
+          <label>
+            Одоогийн нууц үг
+          </label>
+
+          <input
+            type="password"
+            value={
+              currentPassword
+            }
+            onChange={(
+              event
+            ) =>
+              setCurrentPassword(
+                event.target
+                  .value
+              )
+            }
+            autoComplete="current-password"
+            required
+          />
 
           <label>
             Шинэ нууц үг
@@ -183,9 +208,8 @@ export default function ChangePassword() {
                   .value
               )
             }
-            placeholder="Хамгийн багадаа 8 тэмдэгт"
             autoComplete="new-password"
-            minLength={8}
+            minLength={10}
             required
           />
 
@@ -206,19 +230,20 @@ export default function ChangePassword() {
                   .value
               )
             }
-            placeholder="Нууц үгээ дахин оруулна уу"
             autoComplete="new-password"
-            minLength={8}
+            minLength={10}
             required
           />
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={
+              loading
+            }
           >
             {loading
               ? "Хадгалж байна..."
-              : "Шинэ нууц үг үүсгэх"}
+              : "Нууц үг шинэчлэх"}
           </button>
         </form>
       </div>

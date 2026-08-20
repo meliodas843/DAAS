@@ -13,11 +13,12 @@ async function getActivityTotals(
   dateTo,
   branchId
 ) {
-  const filters = buildFilters(
-    dateFrom,
-    dateTo,
-    branchId
-  );
+  const filters =
+    buildFilters(
+      dateFrom,
+      dateTo,
+      branchId
+    );
 
   const result =
     await pool.query(
@@ -27,13 +28,15 @@ async function getActivityTotals(
           SUM(
             CASE
               WHEN
-                aa.account_type IN (
+                aa.account_type
+                IN (
                   'income',
                   'income_other',
                   'expense',
                   'expense_direct_cost'
                 )
-              THEN aml.balance
+              THEN
+                aml.balance
               ELSE 0
             END
           ),
@@ -44,12 +47,14 @@ async function getActivityTotals(
           SUM(
             CASE
               WHEN
-                aa.account_type IN (
+                aa.account_type
+                IN (
                   'liability_current',
                   'liability_non_current',
                   'equity'
                 )
-              THEN aml.balance
+              THEN
+                aml.balance
               ELSE 0
             END
           ),
@@ -60,7 +65,8 @@ async function getActivityTotals(
           SUM(
             CASE
               WHEN
-                aa.account_type NOT IN (
+                aa.account_type
+                NOT IN (
                   'income',
                   'income_other',
                   'expense',
@@ -69,7 +75,8 @@ async function getActivityTotals(
                   'liability_non_current',
                   'equity'
                 )
-              THEN aml.balance
+              THEN
+                aml.balance
               ELSE 0
             END
           ),
@@ -83,18 +90,25 @@ async function getActivityTotals(
     );
 
   const row =
-    result.rows[0] || {};
+    result.rows[0] ||
+    {};
 
   return {
-    operating: Number(
-      row.operating || 0
-    ),
-    financing: Number(
-      row.financing || 0
-    ),
-    investing: Number(
-      row.investing || 0
-    )
+    operating:
+      Number(
+        row.operating ||
+          0
+      ),
+    financing:
+      Number(
+        row.financing ||
+          0
+      ),
+    investing:
+      Number(
+        row.investing ||
+          0
+      )
   };
 }
 
@@ -123,11 +137,13 @@ router.get(
               SUM(
                 CASE
                   WHEN
-                    aa.account_type IN (
+                    aa.account_type
+                    IN (
                       'asset_cash',
                       'asset_current'
                     )
-                  THEN aml.balance
+                  THEN
+                    aml.balance
                   ELSE 0
                 END
               ),
@@ -140,10 +156,12 @@ router.get(
           filters.values
         );
 
-      const balance = Number(
-        result.rows[0]?.balance ||
-          0
-      );
+      const balance =
+        Number(
+          result.rows[0]
+            ?.balance ||
+            0
+        );
 
       const activities =
         await getActivityTotals(
@@ -157,7 +175,7 @@ router.get(
         activities.financing +
         activities.investing;
 
-      res.json({
+      return res.json({
         total,
         balance,
         operating:
@@ -173,9 +191,9 @@ router.get(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }
@@ -186,8 +204,7 @@ router.get(
   async (req, res) => {
     try {
       const {
-        date_from =
-          "2026-01-01",
+        date_from = "2026-01-01",
         date_to,
         branch_id
       } = req.query;
@@ -240,7 +257,7 @@ router.get(
           filters.values
         );
 
-      res.json(
+      return res.json(
         rowsToNumbers(
           result.rows
         )
@@ -251,9 +268,9 @@ router.get(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }
@@ -264,8 +281,7 @@ router.get(
   async (req, res) => {
     try {
       const {
-        date_from =
-          "2026-01-01",
+        date_from = "2026-01-01",
         date_to,
         branch_id
       } = req.query;
@@ -319,7 +335,7 @@ router.get(
           filters.values
         );
 
-      res.json(
+      return res.json(
         rowsToNumbers(
           result.rows
         )
@@ -330,9 +346,9 @@ router.get(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }
@@ -343,8 +359,7 @@ router.get(
   async (req, res) => {
     try {
       const {
-        date_from =
-          "2026-01-01",
+        date_from = "2026-01-01",
         date_to,
         branch_id
       } = req.query;
@@ -398,7 +413,7 @@ router.get(
           filters.values
         );
 
-      res.json(
+      return res.json(
         rowsToNumbers(
           result.rows
         )
@@ -409,9 +424,9 @@ router.get(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }
@@ -422,8 +437,7 @@ router.get(
   async (req, res) => {
     try {
       const {
-        date_from =
-          "2026-01-01",
+        date_from = "2026-01-01",
         date_to,
         branch_id
       } = req.query;
@@ -435,7 +449,7 @@ router.get(
           branch_id
         );
 
-      res.json([
+      return res.json([
         {
           name: "operating",
           value:
@@ -458,9 +472,9 @@ router.get(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }

@@ -1,169 +1,215 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import pool from "../db.js";
 import {
   requireAuth,
   requireAdmin
 } from "../middleware/auth.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-function createToken(user) {
+const loginAttempts =
+  new Map();
+
+const MAX_ATTEMPTS = 5;
+const BLOCK_TIME =
+  15 * 60 * 1000;
+
+function getClientKey(req) {
+  return String(
+    req.ip ||
+      req.socket
+        ?.remoteAddress ||
+      "unknown"
+  );
+}
+
+function loginRateLimit(
+  req,
+  res,
+  next
+) {
+  const key =
+    getClientKey(req);
+
+  const now =
+    Date.now();
+
+  const record =
+    loginAttempts.get(key);
+
+  if (
+    record &&
+    record.blockedUntil >
+      now
+  ) {
+    const seconds =
+      Math.ceil(
+        (
+          record.blockedUntil -
+          now
+        ) / 1000
+      );
+
+    return res.status(429).json({
+      success: false,
+      message:
+        `Too many login attempts. Try again in ${seconds} seconds.`
+    });
+  }
+
+  if (
+    record &&
+    record.blockedUntil <=
+      now
+  ) {
+    loginAttempts.delete(
+      key
+    );
+  }
+
+  req.loginRateKey =
+    key;
+
+  return next();
+}
+
+function recordFailedLogin(
+  key
+) {
+  const now =
+    Date.now();
+
+  const current =
+    loginAttempts.get(key) ||
+    {
+      attempts: 0,
+      blockedUntil: 0
+    };
+
+  current.attempts += 1;
+
+  if (
+    current.attempts >=
+    MAX_ATTEMPTS
+  ) {
+    current.blockedUntil =
+      now +
+      BLOCK_TIME;
+
+    current.attempts = 0;
+  }
+
+  loginAttempts.set(
+    key,
+    current
+  );
+}
+
+function clearLoginAttempts(
+  key
+) {
+  loginAttempts.delete(
+    key
+  );
+}
+
+function createToken(
+  user
+) {
   return jwt.sign(
     {
-      id: Number(user.id),
-      email: user.email,
-      role: user.role,
-      must_change_password:
-        Boolean(user.must_change_password)
+      id:
+        Number(user.id),
+      token_version:
+        Number(
+          user.token_version ||
+            0
+        )
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "8h"
+      expiresIn: "8h",
+      jwtid:
+        crypto.randomUUID()
     }
   );
 }
 
-router.post("/auth/login", async (req, res) => {
-  try {
-    const email = String(
-      req.body.email || ""
-    )
-      .trim()
-      .toLowerCase();
-
-    const password = String(
-      req.body.password || ""
-    );
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Email and password are required"
-      });
-    }
-
-    const result =
-      await pool.query(
-        `
-        SELECT
-          id,
-          email,
-          password_hash,
-          role,
-          must_change_password,
-          is_active
-        FROM public.dashboard_users
-        WHERE LOWER(email) = $1
-        LIMIT 1
-        `,
-        [email]
-      );
-
-    if (
-      result.rows.length === 0
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "И-мэйл эсвэл нууц үг буруу байна"
-      });
-    }
-
-    const user =
-      result.rows[0];
-
-    if (!user.is_active) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Хэрэглэгч идэвхгүй байна"
-      });
-    }
-
-    const validPassword =
-      await bcrypt.compare(
-        password,
-        user.password_hash
-      );
-
-    if (!validPassword) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "И-мэйл эсвэл нууц үг буруу байна"
-      });
-    }
-
-    const token =
-      createToken(user);
-
-    return res.json({
-      success: true,
-      token,
-      must_change_password:
-        Boolean(
-          user.must_change_password
-        ),
-      user: {
-        id: Number(user.id),
-        email: user.email,
-        role: user.role,
-        must_change_password:
-          Boolean(
-            user.must_change_password
-          )
-      }
-    });
-  } catch (error) {
-    console.error(
-      "LOGIN ERROR:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get(
-  "/auth/me",
-  requireAuth,
+router.post(
+  "/auth/login",
+  loginRateLimit,
   async (req, res) => {
     try {
+      const email =
+        String(
+          req.body.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const password =
+        String(
+          req.body.password ||
+            ""
+        );
+
+      if (
+        !email ||
+        !password
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Email and password are required"
+        });
+      }
+
       const result =
         await pool.query(
           `
           SELECT
             id,
             email,
+            password_hash,
             role,
             must_change_password,
-            is_active
+            is_active,
+            token_version
           FROM public.dashboard_users
-          WHERE id = $1
+          WHERE LOWER(email) = $1
           LIMIT 1
           `,
-          [req.user.id]
+          [email]
         );
 
       if (
-        result.rows.length === 0
+        result.rows.length ===
+        0
       ) {
-        return res.status(404).json({
+        recordFailedLogin(
+          req.loginRateKey
+        );
+
+        return res.status(401).json({
           success: false,
-          message: "User not found"
+          message:
+            "И-мэйл эсвэл нууц үг буруу байна"
         });
       }
 
       const user =
         result.rows[0];
 
-      if (!user.is_active) {
+      if (
+        !Boolean(
+          user.is_active
+        )
+      ) {
         return res.status(403).json({
           success: false,
           message:
@@ -171,12 +217,45 @@ router.get(
         });
       }
 
+      const validPassword =
+        await bcrypt.compare(
+          password,
+          user.password_hash
+        );
+
+      if (
+        !validPassword
+      ) {
+        recordFailedLogin(
+          req.loginRateKey
+        );
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "И-мэйл эсвэл нууц үг буруу байна"
+        });
+      }
+
+      clearLoginAttempts(
+        req.loginRateKey
+      );
+
+      const token =
+        createToken(user);
+
       return res.json({
         success: true,
+        token,
         user: {
-          id: Number(user.id),
-          email: user.email,
-          role: user.role,
+          id:
+            Number(
+              user.id
+            ),
+          email:
+            user.email,
+          role:
+            user.role,
           must_change_password:
             Boolean(
               user.must_change_password
@@ -185,13 +264,70 @@ router.get(
       });
     } catch (error) {
       console.error(
-        "AUTH ME ERROR:",
+        "LOGIN ERROR:",
         error
       );
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message:
+          "Internal server error"
+      });
+    }
+  }
+);
+
+router.get(
+  "/auth/me",
+  requireAuth,
+  async (req, res) => {
+    return res.json({
+      success: true,
+      user: {
+        id:
+          req.user.id,
+        email:
+          req.user.email,
+        role:
+          req.user.role,
+        must_change_password:
+          req.user
+            .must_change_password
+      }
+    });
+  }
+);
+
+router.post(
+  "/auth/logout",
+  requireAuth,
+  async (req, res) => {
+    try {
+      await pool.query(
+        `
+        UPDATE public.dashboard_users
+        SET
+          token_version =
+            token_version + 1,
+          updated_at = NOW()
+        WHERE id = $1
+        `,
+        [req.user.id]
+      );
+
+      return res.json({
+        success: true
+      });
+    } catch (error) {
+      console.error(
+        "LOGOUT ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
       });
     }
   }
@@ -202,19 +338,40 @@ router.post(
   requireAuth,
   async (req, res) => {
     try {
+      const currentPassword =
+        String(
+          req.body
+            .current_password ||
+            ""
+        );
+
       const newPassword =
         String(
-          req.body.new_password ||
+          req.body
+            .new_password ||
             ""
         );
 
       const confirmPassword =
         String(
-          req.body.confirm_password ||
+          req.body
+            .confirm_password ||
             ""
         );
 
-      if (!newPassword) {
+      if (
+        !currentPassword
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Одоогийн нууц үгээ оруулна уу"
+        });
+      }
+
+      if (
+        !newPassword
+      ) {
         return res.status(400).json({
           success: false,
           message:
@@ -223,19 +380,19 @@ router.post(
       }
 
       if (
-        newPassword.length < 8
+        newPassword.length <
+        10
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Нууц үг хамгийн багадаа 8 тэмдэгт байна"
+            "Нууц үг хамгийн багадаа 10 тэмдэгт байна"
         });
       }
 
       if (
-        confirmPassword &&
         newPassword !==
-          confirmPassword
+        confirmPassword
       ) {
         return res.status(400).json({
           success: false,
@@ -244,7 +401,7 @@ router.post(
         });
       }
 
-      const currentResult =
+      const result =
         await pool.query(
           `
           SELECT
@@ -253,7 +410,8 @@ router.post(
             password_hash,
             role,
             must_change_password,
-            is_active
+            is_active,
+            token_version
           FROM public.dashboard_users
           WHERE id = $1
           LIMIT 1
@@ -262,19 +420,24 @@ router.post(
         );
 
       if (
-        currentResult.rows.length ===
+        result.rows.length ===
         0
       ) {
-        return res.status(404).json({
+        return res.status(401).json({
           success: false,
-          message: "User not found"
+          message:
+            "Invalid session"
         });
       }
 
-      const currentUser =
-        currentResult.rows[0];
+      const user =
+        result.rows[0];
 
-      if (!currentUser.is_active) {
+      if (
+        !Boolean(
+          user.is_active
+        )
+      ) {
         return res.status(403).json({
           success: false,
           message:
@@ -282,17 +445,35 @@ router.post(
         });
       }
 
-      const samePassword =
+      const currentValid =
         await bcrypt.compare(
-          newPassword,
-          currentUser.password_hash
+          currentPassword,
+          user.password_hash
         );
 
-      if (samePassword) {
+      if (
+        !currentValid
+      ) {
         return res.status(400).json({
           success: false,
           message:
-            "Шинэ нууц үг түр нууц үгтэй ижил байж болохгүй"
+            "Одоогийн нууц үг буруу байна"
+        });
+      }
+
+      const samePassword =
+        await bcrypt.compare(
+          newPassword,
+          user.password_hash
+        );
+
+      if (
+        samePassword
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Шинэ нууц үг одоогийн нууц үгтэй ижил байж болохгүй"
         });
       }
 
@@ -302,13 +483,15 @@ router.post(
           12
         );
 
-      const result =
+      const update =
         await pool.query(
           `
           UPDATE public.dashboard_users
           SET
             password_hash = $1,
             must_change_password = false,
+            token_version =
+              token_version + 1,
             updated_at = NOW()
           WHERE id = $2
           RETURNING
@@ -316,7 +499,8 @@ router.post(
             email,
             role,
             must_change_password,
-            is_active
+            is_active,
+            token_version
           `,
           [
             hash,
@@ -324,23 +508,26 @@ router.post(
           ]
         );
 
-      const user =
-        result.rows[0];
+      const updatedUser =
+        update.rows[0];
 
       const token =
-        createToken(user);
+        createToken(
+          updatedUser
+        );
 
       return res.json({
         success: true,
-        message:
-          "Нууц үг амжилттай шинэчлэгдлээ",
         token,
-        must_change_password:
-          false,
         user: {
-          id: Number(user.id),
-          email: user.email,
-          role: user.role,
+          id:
+            Number(
+              updatedUser.id
+            ),
+          email:
+            updatedUser.email,
+          role:
+            updatedUser.role,
           must_change_password:
             false
         }
@@ -353,7 +540,8 @@ router.post(
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message:
+          "Internal server error"
       });
     }
   }
@@ -383,20 +571,25 @@ router.get(
 
       return res.json({
         success: true,
-        users: result.rows.map(
-          (user) => ({
-            ...user,
-            id: Number(user.id),
-            must_change_password:
-              Boolean(
-                user.must_change_password
-              ),
-            is_active:
-              Boolean(
-                user.is_active
-              )
-          })
-        )
+        users:
+          result.rows.map(
+            (user) => ({
+              ...user,
+              id:
+                Number(
+                  user.id
+                ),
+              must_change_password:
+                Boolean(
+                  user
+                    .must_change_password
+                ),
+              is_active:
+                Boolean(
+                  user.is_active
+                )
+            })
+          )
       });
     } catch (error) {
       console.error(
@@ -406,7 +599,8 @@ router.get(
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message:
+          "Internal server error"
       });
     }
   }
@@ -418,44 +612,45 @@ router.post(
   requireAdmin,
   async (req, res) => {
     try {
-      const email = String(
-        req.body.email || ""
-      )
-        .trim()
-        .toLowerCase();
+      const email =
+        String(
+          req.body.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
 
-      const password = String(
-        req.body.password || ""
-      );
+      const password =
+        String(
+          req.body.password ||
+            ""
+        );
 
       const role =
-        req.body.role === "admin"
+        req.body.role ===
+        "admin"
           ? "admin"
           : "viewer";
 
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "И-мэйл оруулна уу"
-        });
-      }
-
-      if (!password) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Түр нууц үг оруулна уу"
-        });
-      }
-
       if (
-        password.length < 8
+        !email ||
+        !password
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Түр нууц үг хамгийн багадаа 8 тэмдэгт байна"
+            "И-мэйл болон түр нууц үг шаардлагатай"
+        });
+      }
+
+      if (
+        password.length <
+        10
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Түр нууц үг хамгийн багадаа 10 тэмдэгт байна"
         });
       }
 
@@ -471,7 +666,8 @@ router.post(
         );
 
       if (
-        existing.rows.length > 0
+        existing.rows.length >
+        0
       ) {
         return res.status(409).json({
           success: false,
@@ -496,6 +692,7 @@ router.post(
             is_verified,
             must_change_password,
             is_active,
+            token_version,
             created_at,
             updated_at
           )
@@ -506,6 +703,7 @@ router.post(
             true,
             true,
             true,
+            0,
             NOW(),
             NOW()
           )
@@ -513,7 +711,6 @@ router.post(
             id,
             email,
             role,
-            is_verified,
             must_change_password,
             is_active,
             created_at,
@@ -526,27 +723,10 @@ router.post(
           ]
         );
 
-      const createdUser =
-        result.rows[0];
-
       return res.status(201).json({
         success: true,
-        message:
-          "Хэрэглэгч амжилттай нэмэгдлээ",
-        user: {
-          ...createdUser,
-          id: Number(
-            createdUser.id
-          ),
-          must_change_password:
-            Boolean(
-              createdUser.must_change_password
-            ),
-          is_active:
-            Boolean(
-              createdUser.is_active
-            )
-        }
+        user:
+          result.rows[0]
       });
     } catch (error) {
       console.error(
@@ -555,7 +735,8 @@ router.post(
       );
 
       if (
-        error.code === "23505"
+        error.code ===
+        "23505"
       ) {
         return res.status(409).json({
           success: false,
@@ -566,7 +747,8 @@ router.post(
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message:
+          "Internal server error"
       });
     }
   }
@@ -584,7 +766,7 @@ router.patch(
         );
 
       if (
-        !Number.isFinite(
+        !Number.isInteger(
           userId
         )
       ) {
@@ -596,13 +778,15 @@ router.patch(
       }
 
       if (
-        Number(req.user.id) ===
-        userId
+        userId ===
+        Number(
+          req.user.id
+        )
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Өөрийн эрх болон төлөвийг эндээс өөрчлөх боломжгүй"
+            "Өөрийн эрх эсвэл төлөвийг өөрчлөх боломжгүй"
         });
       }
 
@@ -611,7 +795,6 @@ router.patch(
           `
           SELECT
             id,
-            email,
             role,
             is_active
           FROM public.dashboard_users
@@ -627,12 +810,26 @@ router.patch(
       ) {
         return res.status(404).json({
           success: false,
-          message: "User not found"
+          message:
+            "User not found"
         });
       }
 
       const current =
         currentResult.rows[0];
+
+      if (
+        current.role ===
+          "admin" &&
+        req.body.is_active ===
+          false
+      ) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Өөр админыг идэвхгүй болгох боломжгүй"
+        });
+      }
 
       const role =
         req.body.role ===
@@ -650,7 +847,8 @@ router.patch(
               current.is_active
             )
           : Boolean(
-              req.body.is_active
+              req.body
+                .is_active
             );
 
       const result =
@@ -660,6 +858,13 @@ router.patch(
           SET
             role = $1,
             is_active = $2,
+            token_version =
+              CASE
+                WHEN role <> $1
+                  OR is_active <> $2
+                THEN token_version + 1
+                ELSE token_version
+              END,
             updated_at = NOW()
           WHERE id = $3
           RETURNING
@@ -680,24 +885,8 @@ router.patch(
 
       return res.json({
         success: true,
-        message:
-          "Хэрэглэгч шинэчлэгдлээ",
-        user: {
-          ...result.rows[0],
-          id: Number(
-            result.rows[0].id
-          ),
-          must_change_password:
-            Boolean(
-              result.rows[0]
-                .must_change_password
-            ),
-          is_active:
-            Boolean(
-              result.rows[0]
-                .is_active
-            )
-        }
+        user:
+          result.rows[0]
       });
     } catch (error) {
       console.error(
@@ -707,7 +896,8 @@ router.patch(
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message:
+          "Internal server error"
       });
     }
   }
@@ -731,7 +921,7 @@ router.post(
         );
 
       if (
-        !Number.isFinite(
+        !Number.isInteger(
           userId
         )
       ) {
@@ -743,12 +933,55 @@ router.post(
       }
 
       if (
-        password.length < 8
+        password.length <
+        10
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Түр нууц үг хамгийн багадаа 8 тэмдэгт байна"
+            "Түр нууц үг хамгийн багадаа 10 тэмдэгт байна"
+        });
+      }
+
+      const targetResult =
+        await pool.query(
+          `
+          SELECT
+            id,
+            role
+          FROM public.dashboard_users
+          WHERE id = $1
+          LIMIT 1
+          `,
+          [userId]
+        );
+
+      if (
+        targetResult.rows.length ===
+        0
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "User not found"
+        });
+      }
+
+      const target =
+        targetResult.rows[0];
+
+      if (
+        target.role ===
+          "admin" &&
+        userId !==
+          Number(
+            req.user.id
+          )
+      ) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Өөр админы нууц үгийг шинэчлэх боломжгүй"
         });
       }
 
@@ -765,6 +998,8 @@ router.post(
           SET
             password_hash = $1,
             must_change_password = true,
+            token_version =
+              token_version + 1,
             updated_at = NOW()
           WHERE id = $2
           RETURNING
@@ -781,33 +1016,10 @@ router.post(
           ]
         );
 
-      if (
-        result.rows.length === 0
-      ) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "User not found"
-        });
-      }
-
       return res.json({
         success: true,
-        message:
-          "Түр нууц үг шинэчлэгдлээ",
-        user: {
-          ...result.rows[0],
-          id: Number(
-            result.rows[0].id
-          ),
-          must_change_password:
-            true,
-          is_active:
-            Boolean(
-              result.rows[0]
-                .is_active
-            )
-        }
+        user:
+          result.rows[0]
       });
     } catch (error) {
       console.error(
@@ -817,80 +1029,8 @@ router.post(
 
       return res.status(500).json({
         success: false,
-        message: error.message
-      });
-    }
-  }
-);
-
-router.delete(
-  "/users/:id",
-  requireAuth,
-  requireAdmin,
-  async (req, res) => {
-    try {
-      const userId = Number(
-        req.params.id
-      );
-
-      if (
-        !Number.isFinite(
-          userId
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid user id"
-        });
-      }
-
-      if (
-        Number(req.user.id) ===
-        userId
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Өөрийн хэрэглэгчийг устгах боломжгүй"
-        });
-      }
-
-      const result =
-        await pool.query(
-          `
-          DELETE FROM public.dashboard_users
-          WHERE id = $1
-          RETURNING
-            id,
-            email
-          `,
-          [userId]
-        );
-
-      if (
-        result.rows.length === 0
-      ) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found"
-        });
-      }
-
-      return res.json({
-        success: true,
         message:
-          "Хэрэглэгч амжилттай устгагдлаа",
-        user: result.rows[0]
-      });
-    } catch (error) {
-      console.error(
-        "DELETE USER ERROR:",
-        error
-      );
-
-      return res.status(500).json({
-        success: false,
-        message: error.message
+          "Internal server error"
       });
     }
   }

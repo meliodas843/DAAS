@@ -365,7 +365,7 @@ export default function Users() {
       <div className="users-page-header">
         <div>
           <h2>
-            Хүмүүс
+            Хэрэглэгчид
           </h2>
 
           <p>

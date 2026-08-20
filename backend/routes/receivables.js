@@ -8,331 +8,631 @@ import {
 
 const router = express.Router();
 
-router.get("/by_branch", async (req, res) => {
-  try {
-    const {
-      date_from = "2026-01-01",
-      date_to,
-      branch_id
-    } = req.query;
+router.get(
+  "/by_branch",
+  async (req, res) => {
+    try {
+      const {
+        date_from = "2026-01-01",
+        date_to,
+        branch_id
+      } = req.query;
 
-    const filters = buildFilters(
-      date_from,
-      date_to,
-      branch_id
-    );
+      const filters =
+        buildFilters(
+          date_from,
+          date_to,
+          branch_id
+        );
 
-    const result = await pool.query(
-      `
-      SELECT
-        COALESCE(
-          rb.name->>'mn_MN',
-          rb.name->>'en_US',
-          'Тодорхойгүй'
-        ) AS name,
-        SUM(aml.amount_residual) AS value
-      ${BASE}
-      ${filters.sql}
-      AND aa.account_type = 'asset_receivable'
-      AND am.move_type = 'out_invoice'
-      AND aml.amount_residual > 0
-      GROUP BY rb.name
-      HAVING SUM(aml.amount_residual) > 0
-      ORDER BY value DESC
-      `,
-      filters.values
-    );
+      const result =
+        await pool.query(
+          `
+          SELECT
+            COALESCE(
+              rb.name->>'mn_MN',
+              rb.name->>'en_US',
+              'Тодорхойгүй'
+            ) AS name,
 
-    res.json(rowsToNumbers(result.rows));
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
+            SUM(
+              aml.amount_residual
+            ) AS value
 
-router.get("/by_account", async (req, res) => {
-  try {
-    const {
-      date_from = "2026-01-01",
-      date_to,
-      branch_id
-    } = req.query;
+          ${BASE}
+          ${filters.sql}
 
-    const filters = buildFilters(
-      date_from,
-      date_to,
-      branch_id
-    );
+          AND
+            aa.account_type =
+            'asset_receivable'
 
-    const result = await pool.query(
-      `
-      SELECT
-        COALESCE(
-          aa.name->>'mn_MN',
-          aa.name->>'en_US',
-          aa.name::text
-        ) AS name,
-        SUM(aml.amount_residual) AS value
-      ${BASE}
-      ${filters.sql}
-      AND aa.account_type = 'asset_receivable'
-      AND am.move_type = 'out_invoice'
-      AND aml.amount_residual > 0
-      GROUP BY aa.name
-      HAVING SUM(aml.amount_residual) > 0
-      ORDER BY value DESC
-      `,
-      filters.values
-    );
+          AND
+            am.move_type =
+            'out_invoice'
 
-    res.json(rowsToNumbers(result.rows));
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
+          AND
+            aml.amount_residual > 0
 
-router.get("/by_month", async (req, res) => {
-  try {
-    const {
-      date_from = "2026-01-01",
-      date_to,
-      branch_id
-    } = req.query;
+          GROUP BY
+            rb.name
 
-    const filters = buildFilters(
-      date_from,
-      date_to,
-      branch_id
-    );
+          HAVING
+            SUM(
+              aml.amount_residual
+            ) > 0
 
-    const result = await pool.query(
-      `
-      SELECT
-        TO_CHAR(
-          DATE_TRUNC('month', aml.date),
-          'MM'
-        ) AS name,
-        SUM(aml.amount_residual) AS value
-      ${BASE}
-      ${filters.sql}
-      AND aa.account_type = 'asset_receivable'
-      AND am.move_type = 'out_invoice'
-      GROUP BY DATE_TRUNC('month', aml.date)
-      ORDER BY DATE_TRUNC('month', aml.date)
-      `,
-      filters.values
-    );
+          ORDER BY
+            value DESC
+          `,
+          filters.values
+        );
 
-    res.json(rowsToNumbers(result.rows));
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
+      return res.json(
+        rowsToNumbers(
+          result.rows
+        )
+      );
+    } catch (error) {
+      console.error(
+        "AR BY BRANCH ERROR:",
+        error
+      );
 
-router.get("/month_change", async (req, res) => {
-  try {
-    const {
-      date_from = "2026-01-01",
-      date_to,
-      branch_id
-    } = req.query;
-
-    const filters = buildFilters(
-      date_from,
-      date_to,
-      branch_id
-    );
-
-    const result = await pool.query(
-      `
-      WITH monthly AS (
-        SELECT
-          DATE_TRUNC('month', aml.date) AS month,
-          SUM(aml.amount_residual) AS total
-        ${BASE}
-        ${filters.sql}
-        AND aa.account_type = 'asset_receivable'
-        AND am.move_type = 'out_invoice'
-        GROUP BY DATE_TRUNC('month', aml.date)
-      ),
-      changes AS (
-        SELECT
-          month,
-          total,
-          total - LAG(total) OVER (
-            ORDER BY month
-          ) AS value
-        FROM monthly
-      )
-      SELECT
-        TO_CHAR(month, 'YYYY-MM') AS name,
-        value
-      FROM changes
-      WHERE value IS NOT NULL
-      ORDER BY month
-      `,
-      filters.values
-    );
-
-    res.json(rowsToNumbers(result.rows));
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get("/aging", async (req, res) => {
-  try {
-    const {
-      date_to,
-      branch_id
-    } = req.query;
-
-    const endDate =
-      date_to || new Date().toISOString().slice(0, 10);
-
-    const values = [endDate];
-
-    let branchFilter = "";
-
-    if (branch_id) {
-      values.push(Number(branch_id));
-      branchFilter = `AND aml.branch_id = $2`;
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
     }
-
-    const result = await pool.query(
-      `
-      SELECT
-        CASE
-          WHEN $1::date - aml.date_maturity BETWEEN 1 AND 30
-            THEN '1-30 хоног'
-          WHEN $1::date - aml.date_maturity BETWEEN 31 AND 60
-            THEN '31-60 хоног'
-          WHEN $1::date - aml.date_maturity BETWEEN 61 AND 90
-            THEN '61-90 хоног'
-          WHEN $1::date - aml.date_maturity > 90
-            THEN '90+ хоног'
-          ELSE 'Хугацаа болоогүй'
-        END AS name,
-        SUM(aml.amount_residual) AS value
-      ${BASE}
-      AND aml.date <= $1::date
-      ${branchFilter}
-      AND aa.account_type = 'asset_receivable'
-      AND am.move_type = 'out_invoice'
-      AND aml.amount_residual > 0
-      AND aml.date_maturity IS NOT NULL
-      GROUP BY 1
-      `,
-      values
-    );
-
-    const order = {
-      "Хугацаа болоогүй": 0,
-      "1-30 хоног": 1,
-      "31-60 хоног": 2,
-      "61-90 хоног": 3,
-      "90+ хоног": 4
-    };
-
-    const rows = rowsToNumbers(result.rows);
-
-    rows.sort(
-      (a, b) =>
-        (order[a.name] ?? 99) -
-        (order[b.name] ?? 99)
-    );
-
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
   }
-});
+);
 
-router.get("/collection_rate", async (req, res) => {
-  try {
-    const {
-      date_from = "2026-01-01",
-      date_to,
-      branch_id
-    } = req.query;
+router.get(
+  "/by_account",
+  async (req, res) => {
+    try {
+      const {
+        date_from = "2026-01-01",
+        date_to,
+        branch_id
+      } = req.query;
 
-    const filters = buildFilters(
-      date_from,
-      date_to,
-      branch_id
-    );
+      const filters =
+        buildFilters(
+          date_from,
+          date_to,
+          branch_id
+        );
 
-    const result = await pool.query(
-      `
-      SELECT
-        DATE_TRUNC('month', aml.date) AS month_date,
-        TO_CHAR(
-          DATE_TRUNC('month', aml.date),
-          'MM'
-        ) AS month,
-        COALESCE(
-          SUM(aml.debit),
-          0
-        ) AS invoiced,
-        COALESCE(
-          SUM(aml.amount_residual),
-          0
-        ) AS residual
-      ${BASE}
-      ${filters.sql}
-      AND aa.account_type = 'asset_receivable'
-      AND am.move_type = 'out_invoice'
-      GROUP BY DATE_TRUNC('month', aml.date)
-      ORDER BY month_date
-      `,
-      filters.values
-    );
+      const result =
+        await pool.query(
+          `
+          SELECT
+            COALESCE(
+              aa.name->>'mn_MN',
+              aa.name->>'en_US',
+              aa.name::text
+            ) AS name,
 
-    const data = result.rows.map((row) => {
-      const invoiced = Number(row.invoiced || 0);
-      const residual = Number(row.residual || 0);
-      const collected = invoiced - residual;
+            SUM(
+              aml.amount_residual
+            ) AS value
 
-      const value =
-        invoiced > 0
-          ? Number(
-              (
-                (collected / invoiced) *
-                100
-              ).toFixed(2)
+          ${BASE}
+          ${filters.sql}
+
+          AND
+            aa.account_type =
+            'asset_receivable'
+
+          AND
+            am.move_type =
+            'out_invoice'
+
+          AND
+            aml.amount_residual > 0
+
+          GROUP BY
+            aa.name
+
+          HAVING
+            SUM(
+              aml.amount_residual
+            ) > 0
+
+          ORDER BY
+            value DESC
+          `,
+          filters.values
+        );
+
+      return res.json(
+        rowsToNumbers(
+          result.rows
+        )
+      );
+    } catch (error) {
+      console.error(
+        "AR BY ACCOUNT ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
+  }
+);
+
+router.get(
+  "/by_month",
+  async (req, res) => {
+    try {
+      const {
+        date_from = "2026-01-01",
+        date_to,
+        branch_id
+      } = req.query;
+
+      const filters =
+        buildFilters(
+          date_from,
+          date_to,
+          branch_id
+        );
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            TO_CHAR(
+              DATE_TRUNC(
+                'month',
+                aml.date
+              ),
+              'MM'
+            ) AS name,
+
+            SUM(
+              aml.amount_residual
+            ) AS value
+
+          ${BASE}
+          ${filters.sql}
+
+          AND
+            aa.account_type =
+            'asset_receivable'
+
+          AND
+            am.move_type =
+            'out_invoice'
+
+          GROUP BY
+            DATE_TRUNC(
+              'month',
+              aml.date
             )
-          : 0;
 
-      return {
-        month: String(row.month).replace(/^0/, ""),
-        invoiced,
-        residual,
-        collected,
-        value
-      };
-    });
+          ORDER BY
+            DATE_TRUNC(
+              'month',
+              aml.date
+            )
+          `,
+          filters.values
+        );
 
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+      return res.json(
+        rowsToNumbers(
+          result.rows
+        )
+      );
+    } catch (error) {
+      console.error(
+        "AR BY MONTH ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
   }
-});
+);
+
+router.get(
+  "/month_change",
+  async (req, res) => {
+    try {
+      const {
+        date_from = "2026-01-01",
+        date_to,
+        branch_id
+      } = req.query;
+
+      const filters =
+        buildFilters(
+          date_from,
+          date_to,
+          branch_id
+        );
+
+      const result =
+        await pool.query(
+          `
+          WITH monthly AS (
+            SELECT
+              DATE_TRUNC(
+                'month',
+                aml.date
+              ) AS month,
+
+              SUM(
+                aml.amount_residual
+              ) AS total
+
+            ${BASE}
+            ${filters.sql}
+
+            AND
+              aa.account_type =
+              'asset_receivable'
+
+            AND
+              am.move_type =
+              'out_invoice'
+
+            GROUP BY
+              DATE_TRUNC(
+                'month',
+                aml.date
+              )
+          ),
+
+          changes AS (
+            SELECT
+              month,
+              total,
+
+              total -
+              LAG(total) OVER (
+                ORDER BY month
+              ) AS value
+
+            FROM monthly
+          )
+
+          SELECT
+            TO_CHAR(
+              month,
+              'YYYY-MM'
+            ) AS name,
+
+            value
+
+          FROM changes
+
+          WHERE
+            value IS NOT NULL
+
+          ORDER BY
+            month
+          `,
+          filters.values
+        );
+
+      return res.json(
+        rowsToNumbers(
+          result.rows
+        )
+      );
+    } catch (error) {
+      console.error(
+        "AR MONTH CHANGE ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
+  }
+);
+
+router.get(
+  "/aging",
+  async (req, res) => {
+    try {
+      const {
+        date_to,
+        branch_id
+      } = req.query;
+
+      const endDate =
+        date_to ||
+        new Date()
+          .toISOString()
+          .slice(
+            0,
+            10
+          );
+
+      const values = [
+        endDate
+      ];
+
+      let branchFilter = "";
+
+      if (
+        branch_id &&
+        branch_id !== "all"
+      ) {
+        const branchNumber =
+          Number(branch_id);
+
+        if (
+          !Number.isFinite(
+            branchNumber
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid branch"
+          });
+        }
+
+        values.push(
+          branchNumber
+        );
+
+        branchFilter =
+          `AND aml.branch_id = $${values.length}`;
+      }
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            CASE
+              WHEN
+                $1::date -
+                aml.date_maturity
+                BETWEEN 1 AND 30
+                THEN '1-30 хоног'
+
+              WHEN
+                $1::date -
+                aml.date_maturity
+                BETWEEN 31 AND 60
+                THEN '31-60 хоног'
+
+              WHEN
+                $1::date -
+                aml.date_maturity
+                BETWEEN 61 AND 90
+                THEN '61-90 хоног'
+
+              WHEN
+                $1::date -
+                aml.date_maturity > 90
+                THEN '90+ хоног'
+            END AS name,
+
+            SUM(
+              aml.amount_residual
+            ) AS value
+
+          ${BASE}
+
+          AND
+            aml.date <=
+            $1::date
+
+          ${branchFilter}
+
+          AND
+            aa.account_type =
+            'asset_receivable'
+
+          AND
+            am.move_type =
+            'out_invoice'
+
+          AND
+            aml.amount_residual > 0
+
+          AND
+            aml.date_maturity
+            IS NOT NULL
+
+          GROUP BY 1
+          `,
+          values
+        );
+
+      const order = {
+        "1-30 хоног": 1,
+        "31-60 хоног": 2,
+        "61-90 хоног": 3,
+        "90+ хоног": 4
+      };
+
+      const rows =
+        rowsToNumbers(
+          result.rows
+        ).filter(
+          (row) =>
+            row.name
+        );
+
+      rows.sort(
+        (a, b) =>
+          (
+            order[a.name] ??
+            99
+          ) -
+          (
+            order[b.name] ??
+            99
+          )
+      );
+
+      return res.json(
+        rows
+      );
+    } catch (error) {
+      console.error(
+        "AR AGING ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
+  }
+);
+
+router.get(
+  "/collection_rate",
+  async (req, res) => {
+    try {
+      const {
+        date_from = "2026-01-01",
+        date_to,
+        branch_id
+      } = req.query;
+
+      const filters =
+        buildFilters(
+          date_from,
+          date_to,
+          branch_id
+        );
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            DATE_TRUNC(
+              'month',
+              aml.date
+            ) AS month_date,
+
+            TO_CHAR(
+              DATE_TRUNC(
+                'month',
+                aml.date
+              ),
+              'MM'
+            ) AS month,
+
+            COALESCE(
+              SUM(
+                aml.debit
+              ),
+              0
+            ) AS invoiced,
+
+            COALESCE(
+              SUM(
+                aml.amount_residual
+              ),
+              0
+            ) AS residual
+
+          ${BASE}
+          ${filters.sql}
+
+          AND
+            aa.account_type =
+            'asset_receivable'
+
+          AND
+            am.move_type =
+            'out_invoice'
+
+          GROUP BY
+            DATE_TRUNC(
+              'month',
+              aml.date
+            )
+
+          ORDER BY
+            month_date
+          `,
+          filters.values
+        );
+
+      const data =
+        result.rows.map(
+          (row) => {
+            const invoiced =
+              Number(
+                row.invoiced ||
+                  0
+              );
+
+            const residual =
+              Number(
+                row.residual ||
+                  0
+              );
+
+            const collected =
+              invoiced -
+              residual;
+
+            const value =
+              invoiced > 0
+                ? Number(
+                    (
+                      (
+                        collected /
+                        invoiced
+                      ) *
+                      100
+                    ).toFixed(
+                      2
+                    )
+                  )
+                : 0;
+
+            return {
+              month:
+                String(
+                  row.month
+                ).replace(
+                  /^0/,
+                  ""
+                ),
+              invoiced,
+              residual,
+              collected,
+              value
+            };
+          }
+        );
+
+      return res.json(
+        data
+      );
+    } catch (error) {
+      console.error(
+        "AR COLLECTION RATE ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
+  }
+);
 
 export default router;

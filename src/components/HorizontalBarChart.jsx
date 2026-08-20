@@ -10,70 +10,76 @@ import {
 } from "recharts";
 
 function formatCompact(value) {
-  const number = Number(value || 0);
-  const absolute = Math.abs(number);
-  const sign = number < 0 ? "-" : "";
+  const number =
+    Number(value || 0);
 
-  if (absolute >= 1_000_000_000) {
-    return `${sign}${Math.floor(
-      absolute / 1_000_000_000
-    )}bn`;
+  const absolute =
+    Math.abs(number);
+
+  const sign =
+    number < 0
+      ? "-"
+      : "";
+
+  if (
+    absolute >=
+    1_000_000_000
+  ) {
+    const result =
+      absolute /
+      1_000_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }B`;
   }
 
-  if (absolute >= 1_000_000) {
-    return `${sign}${Math.floor(
-      absolute / 1_000_000
-    )}M`;
+  if (
+    absolute >=
+    1_000_000
+  ) {
+    const result =
+      absolute /
+      1_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }M`;
   }
 
-  if (absolute >= 1_000) {
-    return `${sign}${Math.floor(
-      absolute / 1_000
-    )}K`;
+  if (
+    absolute >=
+    1_000
+  ) {
+    const result =
+      absolute /
+      1_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }K`;
   }
 
-  return `${Math.round(number)}`;
-}
-
-function formatAxis(value) {
-  const number = Number(value || 0);
-  const absolute = Math.abs(number);
-  const sign = number < 0 ? "-" : "";
-
-  if (Math.abs(number) < 0.000001) {
-    return "0";
-  }
-
-  if (absolute >= 1_000_000_000) {
-    return `${sign}₮${(
-      absolute / 1_000_000_000
-    ).toFixed(1)}bn`;
-  }
-
-  if (absolute >= 1_000_000) {
-    return `${sign}₮${(
-      absolute / 1_000_000
-    ).toFixed(1)}M`;
-  }
-
-  if (absolute >= 1_000) {
-    return `${sign}₮${(
-      absolute / 1_000
-    ).toFixed(1)}K`;
-  }
-
-  return `${sign}₮${Math.round(
-    absolute
+  return `${Math.round(
+    number
   )}`;
 }
 
 function formatTooltip(value) {
-  const number = Number(value || 0);
-  const sign = number < 0 ? "-" : "";
+  const number =
+    Number(value || 0);
 
-  return `${sign}₮${Math.round(
-    Math.abs(number)
-  ).toLocaleString("en-US")}`;
+  return `₮${Math.round(
+    number
+  ).toLocaleString(
+    "en-US"
+  )}`;
 }
 
 function wrapLabel(
@@ -104,44 +110,25 @@ function wrapLabel(
       current = next;
     } else {
       if (current) {
-        lines.push(current);
+        lines.push(
+          current
+        );
       }
 
-      if (
-        word.length >
-        maxLength
-      ) {
-        let rest = word;
-
-        while (
-          rest.length >
-          maxLength
-        ) {
-          lines.push(
-            rest.slice(
-              0,
-              maxLength
-            )
-          );
-
-          rest =
-            rest.slice(
-              maxLength
-            );
-        }
-
-        current = rest;
-      } else {
-        current = word;
-      }
+      current = word;
     }
   }
 
   if (current) {
-    lines.push(current);
+    lines.push(
+      current
+    );
   }
 
-  return lines.slice(0, 3);
+  return lines.slice(
+    0,
+    3
+  );
 }
 
 function CustomYAxisTick({
@@ -151,11 +138,13 @@ function CustomYAxisTick({
 }) {
   const lines =
     wrapLabel(
-      payload?.value || "",
+      payload?.value ||
+        "",
       24
     );
 
-  const lineHeight = 12;
+  const lineHeight =
+    12;
 
   const startY =
     y -
@@ -166,7 +155,7 @@ function CustomYAxisTick({
   return (
     <g>
       <text
-        x={x - 8}
+        x={x - 14}
         y={startY}
         textAnchor="end"
         fill="#536177"
@@ -180,7 +169,7 @@ function CustomYAxisTick({
           ) => (
             <tspan
               key={`${line}-${index}`}
-              x={x - 8}
+              x={x - 14}
               dy={
                 index === 0
                   ? 0
@@ -197,10 +186,10 @@ function CustomYAxisTick({
 }
 
 function ValueLabel({
-  x,
-  y,
-  width,
-  height,
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
   value
 }) {
   const number =
@@ -209,7 +198,8 @@ function ValueLabel({
   if (
     !Number.isFinite(
       number
-    )
+    ) ||
+    number === 0
   ) {
     return null;
   }
@@ -218,13 +208,18 @@ function ValueLabel({
     y +
     height / 2;
 
-  if (number >= 0) {
+  const label =
+    formatCompact(
+      number
+    );
+
+  if (number > 0) {
     return (
       <text
         x={
           x +
           width +
-          7
+          8
         }
         y={centerY}
         dominantBaseline="middle"
@@ -233,16 +228,17 @@ function ValueLabel({
         fontSize={10.5}
         fontWeight={800}
       >
-        {formatCompact(
-          number
-        )}
+        {label}
       </text>
     );
   }
 
+  const zeroX =
+    x + width;
+
   return (
     <text
-      x={x - 7}
+      x={zeroX - 8}
       y={centerY}
       dominantBaseline="middle"
       textAnchor="end"
@@ -250,14 +246,12 @@ function ValueLabel({
       fontSize={10.5}
       fontWeight={800}
     >
-      {formatCompact(
-        number
-      )}
+      {label}
     </text>
   );
 }
 
-function getDomain(data) {
+function calculateAxis(data) {
   const values =
     data.map(
       (item) =>
@@ -266,90 +260,162 @@ function getDomain(data) {
         )
     );
 
-  const max =
-    Math.max(
-      ...values,
-      0
-    );
-
-  const min =
+  const minValue =
     Math.min(
       ...values,
       0
     );
 
-  if (
-    min === 0 &&
-    max === 0
-  ) {
-    return [
-      0,
-      1
-    ];
-  }
-
-  const largest =
+  const maxValue =
     Math.max(
-      Math.abs(min),
-      Math.abs(max),
-      1
+      ...values,
+      0
     );
 
-  const padding =
-    largest * 0.12;
+  let min = 0;
 
-  return [
-    min < 0
-      ? min - padding
-      : 0,
-    max > 0
-      ? max + padding
-      : 0
-  ];
+  if (minValue < 0) {
+    const absMin =
+      Math.abs(
+        minValue
+      );
+
+    if (
+      absMin <=
+      500_000_000
+    ) {
+      min =
+        -500_000_000;
+    } else if (
+      absMin <=
+      1_000_000_000
+    ) {
+      min =
+        -1_000_000_000;
+    } else if (
+      absMin <=
+      2_000_000_000
+    ) {
+      min =
+        -2_000_000_000;
+    } else {
+      min =
+        -Math.ceil(
+          absMin /
+            1_000_000_000
+        ) *
+        1_000_000_000;
+    }
+  }
+
+  let max =
+    3_000_000_000;
+
+  if (
+    maxValue >
+    3_000_000_000
+  ) {
+    max =
+      Math.ceil(
+        maxValue /
+          1_000_000_000
+      ) *
+      1_000_000_000;
+  }
+
+  return {
+    min,
+    max
+  };
 }
 
 function createTicks(
-  domain,
-  count = 5
+  min,
+  max
 ) {
-  const [
-    min,
-    max
-  ] = domain;
+  const ticks = [];
 
-  if (count <= 1) {
-    return [min];
+  if (min < 0) {
+    if (
+      min <=
+      -2_000_000_000
+    ) {
+      ticks.push(
+        -2_000_000_000
+      );
+    }
+
+    if (
+      min <=
+      -1_000_000_000
+    ) {
+      ticks.push(
+        -1_000_000_000
+      );
+    }
+
+    if (
+      min <=
+      -500_000_000
+    ) {
+      ticks.push(
+        -500_000_000
+      );
+    }
   }
 
-  const step =
-    (max - min) /
-    (count - 1);
+  ticks.push(0);
 
-  return Array.from(
-    {
-      length: count
-    },
-    (
-      _,
-      index
-    ) =>
-      min +
-      step *
-        index
+  if (
+    max >=
+    500_000_000
+  ) {
+    ticks.push(
+      500_000_000
+    );
+  }
+
+  if (
+    max >=
+    1_000_000_000
+  ) {
+    ticks.push(
+      1_000_000_000
+    );
+  }
+
+  for (
+    let value =
+      2_000_000_000;
+    value <=
+      Math.min(
+        max,
+        5_000_000_000
+      );
+    value +=
+      1_000_000_000
+  ) {
+    ticks.push(
+      value
+    );
+  }
+
+  return [
+    ...new Set(ticks)
+  ].sort(
+    (a, b) =>
+      a - b
   );
 }
 
 export default function HorizontalBarChart({
   data = [],
   color = "#2966e8",
-  yAxisWidth = 195,
+  yAxisWidth = 220,
   rowHeight = 40,
   barSize = 20,
-  visibleHeight = 285
+  visibleHeight = 310
 }) {
-  const rightMargin = 90;
-  const leftMargin = 10;
-
   const safeData =
     Array.isArray(data)
       ? data.map(
@@ -367,19 +433,29 @@ export default function HorizontalBarChart({
     Math.max(
       visibleHeight,
       safeData.length *
-        rowHeight
+        rowHeight +
+        10
     );
 
-  const domain =
-    getDomain(
+  const {
+    min: axisMin,
+    max: axisMax
+  } =
+    calculateAxis(
       safeData
     );
 
-  const ticks =
+  const axisTicks =
     createTicks(
-      domain,
-      5
+      axisMin,
+      axisMax
     );
+
+  const chartLeftMargin =
+    10;
+
+  const chartRightMargin =
+    75;
 
   return (
     <div className="fixed-axis-chart">
@@ -405,12 +481,12 @@ export default function HorizontalBarChart({
               data={safeData}
               layout="vertical"
               margin={{
-                top: 8,
+                top: 5,
                 right:
-                  rightMargin,
-                bottom: 8,
+                  chartRightMargin,
+                bottom: 0,
                 left:
-                  leftMargin
+                  chartLeftMargin
               }}
               barCategoryGap={12}
             >
@@ -422,8 +498,12 @@ export default function HorizontalBarChart({
 
               <XAxis
                 type="number"
-                domain={domain}
+                domain={[
+                  axisMin,
+                  axisMax
+                ]}
                 hide
+                allowDataOverflow
               />
 
               <YAxis
@@ -458,13 +538,18 @@ export default function HorizontalBarChart({
               <Bar
                 dataKey="value"
                 fill={color}
-                barSize={barSize}
+                barSize={
+                  barSize
+                }
                 radius={[
                   0,
                   5,
                   5,
                   0
                 ]}
+                isAnimationActive={
+                  false
+                }
               >
                 <LabelList
                   dataKey="value"
@@ -478,42 +563,98 @@ export default function HorizontalBarChart({
         </div>
       </div>
 
-      <div
-        className="fixed-axis-bottom"
-        style={{
-          paddingLeft:
-            `${
-              yAxisWidth +
-              leftMargin
-            }px`,
-          paddingRight:
-            `${rightMargin}px`
-        }}
-      >
-        <div className="fixed-axis-line">
-          {ticks.map(
-            (
-              tick,
-              index
-            ) => (
-              <span
-                key={index}
-                className="fixed-axis-tick"
-                style={{
-                  left:
-                    `${
-                      (index /
-                        (ticks.length -
-                          1)) *
-                      100
-                    }%`
-                }}
-              >
-                {formatAxis(
-                  tick
-                )}
-              </span>
-            )
+      <div className="shared-bottom-axis">
+        <div
+          className="shared-bottom-axis-track"
+          style={{
+            marginLeft:
+              `${
+                yAxisWidth +
+                chartLeftMargin
+              }px`,
+            marginRight:
+              `${chartRightMargin}px`
+          }}
+        >
+          {axisTicks.map(
+            (tick) => {
+              const position =
+                axisMax ===
+                axisMin
+                  ? 0
+                  : (
+                      (tick -
+                        axisMin) /
+                      (axisMax -
+                        axisMin)
+                    ) *
+                    100;
+
+              let transform =
+                "translateX(-50%)";
+
+              if (
+                axisMin < 0 &&
+                tick ===
+                  -500_000_000
+              ) {
+                transform =
+                  "translateX(-90%)";
+              }
+
+              if (
+                axisMin < 0 &&
+                tick === 0
+              ) {
+                transform =
+                  "translateX(-65%)";
+              }
+
+              if (
+                axisMin < 0 &&
+                tick ===
+                  500_000_000
+              ) {
+                transform =
+                  "translateX(-65%)";
+              }
+
+              if (
+                tick ===
+                  axisTicks[0] &&
+                axisMin >= 0
+              ) {
+                transform =
+                  "translateX(0)";
+              }
+
+              if (
+                tick ===
+                axisTicks[
+                  axisTicks.length -
+                    1
+                ]
+              ) {
+                transform =
+                  "translateX(-100%)";
+              }
+
+              return (
+                <span
+                  key={tick}
+                  className="shared-bottom-axis-tick"
+                  style={{
+                    left:
+                      `${position}%`,
+                    transform
+                  }}
+                >
+                  {formatCompact(
+                    tick
+                  )}
+                </span>
+              );
+            }
           )}
         </div>
       </div>

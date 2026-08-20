@@ -8,7 +8,8 @@ router.get(
   async (req, res) => {
     try {
       const result =
-        await pool.query(`
+        await pool.query(
+          `
           SELECT DISTINCT
             rb.id,
             COALESCE(
@@ -16,16 +17,23 @@ router.get(
               rb.name->>'en_US',
               rb.name::text
             ) AS name
+
           FROM public.res_branch rb
+
           JOIN public.account_move_line aml
             ON aml.branch_id = rb.id
+
           JOIN public.account_move am
             ON am.id = aml.move_id
-          WHERE am.state = 'posted'
-          ORDER BY name
-        `);
 
-      res.json(
+          WHERE
+            am.state = 'posted'
+
+          ORDER BY name
+          `
+        );
+
+      return res.json(
         result.rows.map(
           (row) => ({
             id: Number(row.id),
@@ -34,11 +42,14 @@ router.get(
         )
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "BRANCHES ERROR:",
+        error
+      );
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: error.message
+        message: "Internal server error"
       });
     }
   }

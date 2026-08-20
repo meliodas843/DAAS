@@ -14,10 +14,22 @@ export default function ProtectedRoute({
 
   const {
     authenticated,
-    user
+    user,
+    loading
   } = useAuth();
 
-  if (!authenticated) {
+  if (loading) {
+    return (
+      <div className="page-loading">
+        Loading...
+      </div>
+    );
+  }
+
+  if (
+    !authenticated ||
+    !user
+  ) {
     return (
       <Navigate
         to="/login"
@@ -27,8 +39,11 @@ export default function ProtectedRoute({
   }
 
   if (
-    user?.must_change_password === true &&
-    location.pathname !== "/change-password"
+    user
+      .must_change_password ===
+      true &&
+    location.pathname !==
+      "/change-password"
   ) {
     return (
       <Navigate
@@ -39,8 +54,11 @@ export default function ProtectedRoute({
   }
 
   if (
-    user?.must_change_password === false &&
-    location.pathname === "/change-password"
+    user
+      .must_change_password ===
+      false &&
+    location.pathname ===
+      "/change-password"
   ) {
     return (
       <Navigate

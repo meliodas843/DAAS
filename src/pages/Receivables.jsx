@@ -140,9 +140,7 @@ export default function Receivables() {
         }
       } finally {
         if (active) {
-          setLoading(
-            false
-          );
+          setLoading(false);
         }
       }
     }
@@ -191,9 +189,13 @@ export default function Receivables() {
         />
       </Card>
 
-      <Card title="Авлагын дүн сараар">
+      <Card
+        title="Авлагын дүн сараар"
+        className="monthly-card"
+      >
         <MonthlyBarChart
           data={monthly}
+          color="#43d77b"
         />
       </Card>
 
