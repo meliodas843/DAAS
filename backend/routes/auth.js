@@ -2,166 +2,62 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import pool from "../db.js";
 import {
   requireAuth,
   requireAdmin
 } from "../middleware/auth.js";
 
-const router =
-  express.Router();
+const router = express.Router();
 
-const loginAttempts =
-  new Map();
-
-const MAX_ATTEMPTS = 5;
-const BLOCK_TIME =
-  15 * 60 * 1000;
-
-function getClientKey(req) {
-  return String(
-    req.ip ||
-      req.socket
-        ?.remoteAddress ||
-      "unknown"
-  );
-}
-
-function loginRateLimit(
-  req,
-  res,
-  next
-) {
-  const key =
-    getClientKey(req);
-
-  const now =
-    Date.now();
-
-  const record =
-    loginAttempts.get(key);
-
-  if (
-    record &&
-    record.blockedUntil >
-      now
-  ) {
-    const seconds =
-      Math.ceil(
-        (
-          record.blockedUntil -
-          now
-        ) / 1000
-      );
-
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  handler: (req, res) => {
     return res.status(429).json({
       success: false,
       message:
-        `Too many login attempts. Try again in ${seconds} seconds.`
+        "Too many login attempts. Please try again later."
     });
   }
+});
 
-  if (
-    record &&
-    record.blockedUntil <=
-      now
-  ) {
-    loginAttempts.delete(
-      key
-    );
-  }
-
-  req.loginRateKey =
-    key;
-
-  return next();
-}
-
-function recordFailedLogin(
-  key
-) {
-  const now =
-    Date.now();
-
-  const current =
-    loginAttempts.get(key) ||
-    {
-      attempts: 0,
-      blockedUntil: 0
-    };
-
-  current.attempts += 1;
-
-  if (
-    current.attempts >=
-    MAX_ATTEMPTS
-  ) {
-    current.blockedUntil =
-      now +
-      BLOCK_TIME;
-
-    current.attempts = 0;
-  }
-
-  loginAttempts.set(
-    key,
-    current
-  );
-}
-
-function clearLoginAttempts(
-  key
-) {
-  loginAttempts.delete(
-    key
-  );
-}
-
-function createToken(
-  user
-) {
+function createToken(user) {
   return jwt.sign(
     {
-      id:
-        Number(user.id),
-      token_version:
-        Number(
-          user.token_version ||
-            0
-        )
+      id: Number(user.id),
+      token_version: Number(
+        user.token_version || 0
+      )
     },
     process.env.JWT_SECRET,
     {
       expiresIn: "8h",
-      jwtid:
-        crypto.randomUUID()
+      jwtid: crypto.randomUUID()
     }
   );
 }
 
 router.post(
   "/auth/login",
-  loginRateLimit,
+  loginLimiter,
   async (req, res) => {
     try {
-      const email =
-        String(
-          req.body.email ||
-            ""
-        )
-          .trim()
-          .toLowerCase();
+      const email = String(
+        req.body.email || ""
+      )
+        .trim()
+        .toLowerCase();
 
-      const password =
-        String(
-          req.body.password ||
-            ""
-        );
+      const password = String(
+        req.body.password || ""
+      );
 
-      if (
-        !email ||
-        !password
-      ) {
+      if (!email || !password) {
         return res.status(400).json({
           success: false,
           message:
@@ -188,13 +84,8 @@ router.post(
         );
 
       if (
-        result.rows.length ===
-        0
+        result.rows.length === 0
       ) {
-        recordFailedLogin(
-          req.loginRateKey
-        );
-
         return res.status(401).json({
           success: false,
           message:
@@ -223,23 +114,13 @@ router.post(
           user.password_hash
         );
 
-      if (
-        !validPassword
-      ) {
-        recordFailedLogin(
-          req.loginRateKey
-        );
-
+      if (!validPassword) {
         return res.status(401).json({
           success: false,
           message:
             "И-мэйл эсвэл нууц үг буруу байна"
         });
       }
-
-      clearLoginAttempts(
-        req.loginRateKey
-      );
 
       const token =
         createToken(user);
@@ -248,14 +129,9 @@ router.post(
         success: true,
         token,
         user: {
-          id:
-            Number(
-              user.id
-            ),
-          email:
-            user.email,
-          role:
-            user.role,
+          id: Number(user.id),
+          email: user.email,
+          role: user.role,
           must_change_password:
             Boolean(
               user.must_change_password
@@ -284,12 +160,9 @@ router.get(
     return res.json({
       success: true,
       user: {
-        id:
-          req.user.id,
-        email:
-          req.user.email,
-        role:
-          req.user.role,
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role,
         must_change_password:
           req.user
             .must_change_password
@@ -341,27 +214,22 @@ router.post(
       const currentPassword =
         String(
           req.body
-            .current_password ||
-            ""
+            .current_password || ""
         );
 
       const newPassword =
         String(
           req.body
-            .new_password ||
-            ""
+            .new_password || ""
         );
 
       const confirmPassword =
         String(
           req.body
-            .confirm_password ||
-            ""
+            .confirm_password || ""
         );
 
-      if (
-        !currentPassword
-      ) {
+      if (!currentPassword) {
         return res.status(400).json({
           success: false,
           message:
@@ -369,9 +237,7 @@ router.post(
         });
       }
 
-      if (
-        !newPassword
-      ) {
+      if (!newPassword) {
         return res.status(400).json({
           success: false,
           message:
@@ -380,8 +246,7 @@ router.post(
       }
 
       if (
-        newPassword.length <
-        10
+        newPassword.length < 10
       ) {
         return res.status(400).json({
           success: false,
@@ -420,8 +285,7 @@ router.post(
         );
 
       if (
-        result.rows.length ===
-        0
+        result.rows.length === 0
       ) {
         return res.status(401).json({
           success: false,
@@ -451,9 +315,7 @@ router.post(
           user.password_hash
         );
 
-      if (
-        !currentValid
-      ) {
+      if (!currentValid) {
         return res.status(400).json({
           success: false,
           message:
@@ -467,9 +329,7 @@ router.post(
           user.password_hash
         );
 
-      if (
-        samePassword
-      ) {
+      if (samePassword) {
         return res.status(400).json({
           success: false,
           message:
@@ -520,10 +380,9 @@ router.post(
         success: true,
         token,
         user: {
-          id:
-            Number(
-              updatedUser.id
-            ),
+          id: Number(
+            updatedUser.id
+          ),
           email:
             updatedUser.email,
           role:
@@ -575,14 +434,12 @@ router.get(
           result.rows.map(
             (user) => ({
               ...user,
-              id:
-                Number(
-                  user.id
-                ),
+              id: Number(
+                user.id
+              ),
               must_change_password:
                 Boolean(
-                  user
-                    .must_change_password
+                  user.must_change_password
                 ),
               is_active:
                 Boolean(
@@ -612,30 +469,22 @@ router.post(
   requireAdmin,
   async (req, res) => {
     try {
-      const email =
-        String(
-          req.body.email ||
-            ""
-        )
-          .trim()
-          .toLowerCase();
+      const email = String(
+        req.body.email || ""
+      )
+        .trim()
+        .toLowerCase();
 
-      const password =
-        String(
-          req.body.password ||
-            ""
-        );
+      const password = String(
+        req.body.password || ""
+      );
 
       const role =
-        req.body.role ===
-        "admin"
+        req.body.role === "admin"
           ? "admin"
           : "viewer";
 
-      if (
-        !email ||
-        !password
-      ) {
+      if (!email || !password) {
         return res.status(400).json({
           success: false,
           message:
@@ -644,8 +493,7 @@ router.post(
       }
 
       if (
-        password.length <
-        10
+        password.length < 10
       ) {
         return res.status(400).json({
           success: false,
@@ -666,8 +514,7 @@ router.post(
         );
 
       if (
-        existing.rows.length >
-        0
+        existing.rows.length > 0
       ) {
         return res.status(409).json({
           success: false,
@@ -725,8 +572,7 @@ router.post(
 
       return res.status(201).json({
         success: true,
-        user:
-          result.rows[0]
+        user: result.rows[0]
       });
     } catch (error) {
       console.error(
@@ -735,8 +581,7 @@ router.post(
       );
 
       if (
-        error.code ===
-        "23505"
+        error.code === "23505"
       ) {
         return res.status(409).json({
           success: false,
@@ -761,9 +606,7 @@ router.patch(
   async (req, res) => {
     try {
       const userId =
-        Number(
-          req.params.id
-        );
+        Number(req.params.id);
 
       if (
         !Number.isInteger(
@@ -779,9 +622,7 @@ router.patch(
 
       if (
         userId ===
-        Number(
-          req.user.id
-        )
+        Number(req.user.id)
       ) {
         return res.status(400).json({
           success: false,
@@ -805,8 +646,8 @@ router.patch(
         );
 
       if (
-        currentResult.rows.length ===
-        0
+        currentResult.rows
+          .length === 0
       ) {
         return res.status(404).json({
           success: false,
@@ -847,8 +688,7 @@ router.patch(
               current.is_active
             )
           : Boolean(
-              req.body
-                .is_active
+              req.body.is_active
             );
 
       const result =
@@ -885,8 +725,7 @@ router.patch(
 
       return res.json({
         success: true,
-        user:
-          result.rows[0]
+        user: result.rows[0]
       });
     } catch (error) {
       console.error(
@@ -910,14 +749,11 @@ router.post(
   async (req, res) => {
     try {
       const userId =
-        Number(
-          req.params.id
-        );
+        Number(req.params.id);
 
       const password =
         String(
-          req.body.password ||
-            ""
+          req.body.password || ""
         );
 
       if (
@@ -933,8 +769,7 @@ router.post(
       }
 
       if (
-        password.length <
-        10
+        password.length < 10
       ) {
         return res.status(400).json({
           success: false,
@@ -957,8 +792,8 @@ router.post(
         );
 
       if (
-        targetResult.rows.length ===
-        0
+        targetResult.rows
+          .length === 0
       ) {
         return res.status(404).json({
           success: false,
@@ -974,9 +809,7 @@ router.post(
         target.role ===
           "admin" &&
         userId !==
-          Number(
-            req.user.id
-          )
+          Number(req.user.id)
       ) {
         return res.status(403).json({
           success: false,
@@ -1018,8 +851,7 @@ router.post(
 
       return res.json({
         success: true,
-        user:
-          result.rows[0]
+        user: result.rows[0]
       });
     } catch (error) {
       console.error(
