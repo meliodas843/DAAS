@@ -9,32 +9,58 @@ import {
 function formatCompact(value) {
   const number = Number(value || 0);
   const absolute = Math.abs(number);
-  const sign = number < 0 ? "-" : "";
+  const sign =
+    number < 0
+      ? "-"
+      : "";
 
   if (absolute >= 1_000_000_000) {
-    return `${sign}${(
-      absolute / 1_000_000_000
-    ).toFixed(1)}bn`;
+    const result =
+      absolute /
+      1_000_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }bn`;
   }
 
   if (absolute >= 1_000_000) {
-    return `${sign}${(
-      absolute / 1_000_000
-    ).toFixed(1)}M`;
+    const result =
+      absolute /
+      1_000_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }M`;
   }
 
   if (absolute >= 1_000) {
-    return `${sign}${(
-      absolute / 1_000
-    ).toFixed(1)}K`;
+    const result =
+      absolute /
+      1_000;
+
+    return `${sign}${
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
+    }K`;
   }
 
   return `${Math.round(number)}`;
 }
 
 function formatTooltip(value) {
-  const number = Number(value || 0);
-  const sign = number < 0 ? "-" : "";
+  const number =
+    Number(value || 0);
+
+  const sign =
+    number < 0
+      ? "-"
+      : "";
 
   return `${sign}₮${Math.round(
     Math.abs(number)
@@ -43,10 +69,67 @@ function formatTooltip(value) {
 
 const COLORS = [
   "#2d6bea",
-  "#1f55c5",
+  "#5ca0f2",
   "#ff6a1a",
   "#17439d"
 ];
+
+function PercentageLabel({
+  cx,
+  cy,
+  midAngle,
+  outerRadius,
+  percent
+}) {
+  if (
+    !percent ||
+    percent < 0.02
+  ) {
+    return null;
+  }
+
+  const RADIAN =
+    Math.PI / 180;
+
+  const radius =
+    outerRadius + 22;
+
+  const x =
+    cx +
+    radius *
+      Math.cos(
+        -midAngle *
+          RADIAN
+      );
+
+  const y =
+    cy +
+    radius *
+      Math.sin(
+        -midAngle *
+          RADIAN
+      );
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#536177"
+      textAnchor={
+        x > cx
+          ? "start"
+          : "end"
+      }
+      dominantBaseline="central"
+      fontSize={10}
+      fontWeight={800}
+    >
+      {`${(
+        percent * 100
+      ).toFixed(1)}%`}
+    </text>
+  );
+}
 
 export default function AgingDonut({
   data = [],
@@ -55,49 +138,85 @@ export default function AgingDonut({
   const safeData =
     Array.isArray(data)
       ? data
-          .map((item) => ({
-            ...item,
-            value: Number(
-              item.value || 0
-            )
-          }))
+          .map(
+            (item) => ({
+              ...item,
+              value:
+                Number(
+                  item.value ||
+                    0
+                )
+            })
+          )
           .filter(
             (item) =>
-              Number(item.value) > 0
+              Number(
+                item.value
+              ) > 0
           )
       : [];
 
   const total =
     safeData.reduce(
-      (sum, item) =>
+      (
+        sum,
+        item
+      ) =>
         sum +
         Number(
-          item.value || 0
+          item.value ||
+            0
         ),
       0
     );
 
+  const itemCount =
+    Math.min(
+      Math.max(
+        safeData.length,
+        1
+      ),
+      4
+    );
+
   return (
     <div className="aging-donut">
-      <div className="aging-donut-main">
+      <div className="aging-donut-chart-section">
         <div className="aging-donut-chart">
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
-            <PieChart>
+            <PieChart
+              margin={{
+                top: 28,
+                right: 45,
+                bottom: 28,
+                left: 45
+              }}
+            >
               <Pie
                 data={safeData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                innerRadius={58}
+                innerRadius={62}
                 outerRadius={82}
                 paddingAngle={1}
                 stroke="#ffffff"
                 strokeWidth={2}
-                isAnimationActive={false}
+                labelLine={{
+                  stroke:
+                    "#cbd5e1",
+                  strokeWidth: 1
+                }}
+                label={
+                  <PercentageLabel />
+                }
+                isAnimationActive={
+                  false
+                }
               >
                 {safeData.map(
                   (
@@ -131,8 +250,13 @@ export default function AgingDonut({
             </PieChart>
           </ResponsiveContainer>
         </div>
+      </div>
 
-        <div className="aging-donut-legend">
+      {safeData.length >
+        0 && (
+        <div
+          className={`aging-donut-legend aging-count-${itemCount}`}
+        >
           {safeData.map(
             (
               item,
@@ -140,7 +264,8 @@ export default function AgingDonut({
             ) => {
               const value =
                 Number(
-                  item.value || 0
+                  item.value ||
+                    0
                 );
 
               const percent =
@@ -155,42 +280,44 @@ export default function AgingDonut({
                   key={`${item.name}-${index}`}
                   className="aging-legend-item"
                 >
-                  <span
-                    className="aging-legend-dot"
-                    style={{
-                      background:
-                        COLORS[
-                          index %
-                            COLORS.length
-                        ]
-                    }}
-                  />
+                  <div className="aging-legend-title">
+                    <span
+                      className="aging-legend-dot"
+                      style={{
+                        background:
+                          COLORS[
+                            index %
+                              COLORS.length
+                          ]
+                      }}
+                    />
 
-                  <div className="aging-legend-text">
                     <span className="aging-legend-name">
-                      {item.name}
-                    </span>
-
-                    <strong className="aging-legend-value">
-                      {formatCompact(
-                        value
-                      )}
-                    </strong>
-
-                    <span className="aging-legend-percent">
-                      (
-                      {percent.toFixed(
-                        1
-                      )}
-                      %)
+                      {
+                        item.name
+                      }
                     </span>
                   </div>
+
+                  <strong className="aging-legend-value">
+                    {formatCompact(
+                      value
+                    )}
+                  </strong>
+
+                  <span className="aging-legend-percent">
+                    (
+                    {percent.toFixed(
+                      1
+                    )}
+                    %)
+                  </span>
                 </div>
               );
             }
           )}
         </div>
-      </div>
+      )}
 
       {previous && (
         <div className="aging-donut-previous">

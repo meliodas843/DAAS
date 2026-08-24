@@ -159,7 +159,7 @@ function CustomYAxisTick({
         y={startY}
         textAnchor="end"
         fill="#536177"
-        fontSize={10.5}
+        fontSize={12}
         fontWeight={500}
       >
         {lines.map(

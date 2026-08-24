@@ -608,7 +608,7 @@ router.patch(
       const userId =
         Number(req.params.id);
 
-      if (
+      if ( 
         !Number.isInteger(
           userId
         )
