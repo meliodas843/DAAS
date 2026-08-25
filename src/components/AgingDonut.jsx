@@ -7,14 +7,21 @@ import {
 } from "recharts";
 
 function formatCompact(value) {
-  const number = Number(value || 0);
-  const absolute = Math.abs(number);
+  const number =
+    Number(value || 0);
+
+  const absolute =
+    Math.abs(number);
+
   const sign =
     number < 0
       ? "-"
       : "";
 
-  if (absolute >= 1_000_000_000) {
+  if (
+    absolute >=
+    1_000_000_000
+  ) {
     const result =
       absolute /
       1_000_000_000;
@@ -26,7 +33,10 @@ function formatCompact(value) {
     }bn`;
   }
 
-  if (absolute >= 1_000_000) {
+  if (
+    absolute >=
+    1_000_000
+  ) {
     const result =
       absolute /
       1_000_000;
@@ -38,7 +48,10 @@ function formatCompact(value) {
     }M`;
   }
 
-  if (absolute >= 1_000) {
+  if (
+    absolute >=
+    1_000
+  ) {
     const result =
       absolute /
       1_000;
@@ -50,7 +63,9 @@ function formatCompact(value) {
     }K`;
   }
 
-  return `${Math.round(number)}`;
+  return `${Math.round(
+    number
+  )}`;
 }
 
 function formatTooltip(value) {
@@ -64,14 +79,16 @@ function formatTooltip(value) {
 
   return `${sign}₮${Math.round(
     Math.abs(number)
-  ).toLocaleString("en-US")}`;
+  ).toLocaleString(
+    "en-US"
+  )}`;
 }
 
 const COLORS = [
-  "#2d6bea",
-  "#5ca0f2",
-  "#ff6a1a",
-  "#17439d"
+  "#22C55E",
+  "#EAB308",
+  "#F97316",
+  "#EF4444"
 ];
 
 function PercentageLabel({
@@ -83,7 +100,7 @@ function PercentageLabel({
 }) {
   if (
     !percent ||
-    percent < 0.02
+    percent <= 0
   ) {
     return null;
   }
@@ -92,7 +109,7 @@ function PercentageLabel({
     Math.PI / 180;
 
   const radius =
-    outerRadius + 22;
+    outerRadius + 24;
 
   const x =
     cx +
@@ -121,7 +138,7 @@ function PercentageLabel({
           : "end"
       }
       dominantBaseline="central"
-      fontSize={10}
+      fontSize={11}
       fontWeight={800}
     >
       {`${(
@@ -156,20 +173,6 @@ export default function AgingDonut({
           )
       : [];
 
-  const total =
-    safeData.reduce(
-      (
-        sum,
-        item
-      ) =>
-        sum +
-        Number(
-          item.value ||
-            0
-        ),
-      0
-    );
-
   const itemCount =
     Math.min(
       Math.max(
@@ -189,10 +192,10 @@ export default function AgingDonut({
           >
             <PieChart
               margin={{
-                top: 28,
-                right: 45,
-                bottom: 28,
-                left: 45
+                top: 35,
+                right: 55,
+                bottom: 35,
+                left: 55
               }}
             >
               <Pie
@@ -202,7 +205,7 @@ export default function AgingDonut({
                 cx="50%"
                 cy="50%"
                 innerRadius={62}
-                outerRadius={82}
+                outerRadius={88}
                 paddingAngle={1}
                 stroke="#ffffff"
                 strokeWidth={2}
@@ -215,8 +218,13 @@ export default function AgingDonut({
                   <PercentageLabel />
                 }
                 isAnimationActive={
-                  false
+                  true
                 }
+                animationBegin={100}
+                animationDuration={
+                  1100
+                }
+                animationEasing="ease-out"
               >
                 {safeData.map(
                   (
@@ -268,13 +276,6 @@ export default function AgingDonut({
                     0
                 );
 
-              const percent =
-                total > 0
-                  ? (value /
-                      total) *
-                    100
-                  : 0;
-
               return (
                 <div
                   key={`${item.name}-${index}`}
@@ -293,9 +294,7 @@ export default function AgingDonut({
                     />
 
                     <span className="aging-legend-name">
-                      {
-                        item.name
-                      }
+                      {item.name}
                     </span>
                   </div>
 
@@ -304,14 +303,6 @@ export default function AgingDonut({
                       value
                     )}
                   </strong>
-
-                  <span className="aging-legend-percent">
-                    (
-                    {percent.toFixed(
-                      1
-                    )}
-                    %)
-                  </span>
                 </div>
               );
             }

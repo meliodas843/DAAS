@@ -7,30 +7,103 @@ import {
   XAxis,
   YAxis
 } from "recharts";
+
 import {
   useEffect,
   useMemo,
   useState
 } from "react";
-import {getDashboardFilters} from "../utils/filters";
+
+import {
+  getDashboardFilters
+} from "../utils/filters";
+
 import Card from "../components/Card";
 import HorizontalBarChart from "../components/HorizontalBarChart";
+
 import {
   getBranchRevenueExpense,
   getExpenseAccounts,
   getExpenseGroups,
   getRevenueAccounts
 } from "../api/dashboardApi";
+
 import {
   useDashboard
 } from "../context/DashboardContext";
 
-function formatCompact(value) {
+const translations = {
+  mn: {
+    incomeByAccount:
+      "Орлогын дүн дансаар",
+
+    expenseByCategory:
+      "Зардлын бүлгээр",
+
+    incomeExpenseByBranch:
+      "Орлого Зардлын дүн салбараар",
+
+    expenseByAccount:
+      "Зардлын дүн дансаар",
+
+    income:
+      "Орлого",
+
+    expense:
+      "Зардал",
+
+    amount:
+      "Дүн",
+
+    loading:
+      "Уншиж байна...",
+
+    backendError:
+      "Backend алдаа"
+  },
+
+  en: {
+    incomeByAccount:
+      "Income Amount by Account",
+
+    expenseByCategory:
+      "Expense by Category",
+
+    incomeExpenseByBranch:
+      "Income & Expense Amount by Branch",
+
+    expenseByAccount:
+      "Expense Amount by Account",
+
+    income:
+      "Income",
+
+    expense:
+      "Expense",
+
+    amount:
+      "Amount",
+
+    loading:
+      "Loading...",
+
+    backendError:
+      "Backend error"
+  }
+};
+
+function formatCompact(
+  value
+) {
   const number =
-    Number(value || 0);
+    Number(
+      value || 0
+    );
 
   const absolute =
-    Math.abs(number);
+    Math.abs(
+      number
+    );
 
   const sign =
     number < 0
@@ -46,9 +119,15 @@ function formatCompact(value) {
       1_000_000_000;
 
     return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
+      Number.isInteger(
+        result
+      )
+        ? result.toFixed(
+            0
+          )
+        : result.toFixed(
+            1
+          )
     }B`;
   }
 
@@ -61,9 +140,15 @@ function formatCompact(value) {
       1_000_000;
 
     return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
+      Number.isInteger(
+        result
+      )
+        ? result.toFixed(
+            0
+          )
+        : result.toFixed(
+            1
+          )
     }M`;
   }
 
@@ -76,9 +161,15 @@ function formatCompact(value) {
       1_000;
 
     return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
+      Number.isInteger(
+        result
+      )
+        ? result.toFixed(
+            0
+          )
+        : result.toFixed(
+            1
+          )
     }K`;
   }
 
@@ -87,9 +178,13 @@ function formatCompact(value) {
   )}`;
 }
 
-function formatTooltip(value) {
+function formatTooltip(
+  value
+) {
   const number =
-    Number(value || 0);
+    Number(
+      value || 0
+    );
 
   return `₮${Math.round(
     number
@@ -107,13 +202,17 @@ function wrapLabel(
   }
 
   const words =
-    String(text).split(" ");
+    String(
+      text
+    ).split(" ");
 
   const lines = [];
 
   let current = "";
 
-  for (const word of words) {
+  for (
+    const word of words
+  ) {
     const next =
       current
         ? `${current} ${word}`
@@ -123,19 +222,25 @@ function wrapLabel(
       next.length <=
       maxLength
     ) {
-      current = next;
+      current =
+        next;
     } else {
-      if (current) {
+      if (
+        current
+      ) {
         lines.push(
           current
         );
       }
 
-      current = word;
+      current =
+        word;
     }
   }
 
-  if (current) {
+  if (
+    current
+  ) {
     lines.push(
       current
     );
@@ -164,19 +269,28 @@ function CustomYAxisTick({
 
   const startY =
     y -
-    ((lines.length - 1) *
+    ((lines.length -
+      1) *
       lineHeight) /
       2;
 
   return (
     <g>
       <text
-        x={x - 8}
-        y={startY}
+        x={
+          x - 8
+        }
+        y={
+          startY
+        }
         textAnchor="end"
         fill="#536177"
-        fontSize={10.5}
-        fontWeight={500}
+        fontSize={
+          10.5
+        }
+        fontWeight={
+          500
+        }
       >
         {lines.map(
           (
@@ -185,9 +299,12 @@ function CustomYAxisTick({
           ) => (
             <tspan
               key={`${line}-${index}`}
-              x={x - 8}
+              x={
+                x - 8
+              }
               dy={
-                index === 0
+                index ===
+                0
                   ? 0
                   : lineHeight
               }
@@ -216,18 +333,35 @@ const BRANCH_AXIS_TICKS = [
 ];
 
 function BranchRevenueExpenseChart({
-  data = []
+  data = [],
+  language = "mn"
 }) {
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
+
   const safeData =
-    Array.isArray(data)
+    Array.isArray(
+      data
+    )
       ? data.map(
-          (item) => ({
+          (
+            item
+          ) => ({
             ...item,
+
             revenue:
               Number(
                 item.revenue ||
                   0
               ),
+
             expense:
               Number(
                 item.expense ||
@@ -265,12 +399,14 @@ function BranchRevenueExpenseChart({
       <div className="branch-re-legend">
         <span className="branch-re-legend-item">
           <span className="branch-re-legend-dot expense" />
-          Зардал
+
+          {t.expense}
         </span>
 
         <span className="branch-re-legend-item">
           <span className="branch-re-legend-dot revenue" />
-          Орлого
+
+          {t.income}
         </span>
       </div>
 
@@ -287,22 +423,35 @@ function BranchRevenueExpenseChart({
             height="100%"
           >
             <BarChart
-              data={safeData}
+              data={
+                safeData
+              }
               layout="vertical"
               margin={{
-                top: 5,
+                top:
+                  5,
+
                 right:
                   chartRightMargin,
-                bottom: 0,
+
+                bottom:
+                  0,
+
                 left:
                   chartLeftMargin
               }}
-              barCategoryGap={8}
-              barGap={3}
+              barCategoryGap={
+                8
+              }
+              barGap={
+                3
+              }
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                horizontal={false}
+                horizontal={
+                  false
+                }
                 stroke="#edf1f7"
               />
 
@@ -322,9 +471,15 @@ function BranchRevenueExpenseChart({
                 width={
                   yAxisWidth
                 }
-                axisLine={false}
-                tickLine={false}
-                interval={0}
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                interval={
+                  0
+                }
                 tick={
                   <CustomYAxisTick />
                 }
@@ -348,9 +503,13 @@ function BranchRevenueExpenseChart({
 
               <Bar
                 dataKey="expense"
-                name="Зардал"
+                name={
+                  t.expense
+                }
                 fill="#2966e8"
-                barSize={10}
+                barSize={
+                  10
+                }
                 radius={[
                   0,
                   4,
@@ -358,15 +517,26 @@ function BranchRevenueExpenseChart({
                   0
                 ]}
                 isAnimationActive={
-                  false
+                  true
                 }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
+                animationEasing="ease-out"
               />
 
               <Bar
                 dataKey="revenue"
-                name="Орлого"
+                name={
+                  t.income
+                }
                 fill="#43d77b"
-                barSize={10}
+                barSize={
+                  10
+                }
                 radius={[
                   0,
                   4,
@@ -374,8 +544,15 @@ function BranchRevenueExpenseChart({
                   0
                 ]}
                 isAnimationActive={
-                  false
+                  true
                 }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
+                animationEasing="ease-out"
               />
             </BarChart>
           </ResponsiveContainer>
@@ -391,23 +568,29 @@ function BranchRevenueExpenseChart({
                 yAxisWidth +
                 chartLeftMargin
               }px`,
+
             marginRight:
               `${chartRightMargin}px`
           }}
         >
           {BRANCH_AXIS_TICKS.map(
-            (tick) => (
+            (
+              tick
+            ) => (
               <span
-                key={tick}
+                key={
+                  tick
+                }
                 className="shared-bottom-axis-tick"
                 style={{
-                  left: `${
-                    ((tick -
-                      BRANCH_AXIS_MIN) /
-                      (BRANCH_AXIS_MAX -
-                        BRANCH_AXIS_MIN)) *
-                    100
-                  }%`
+                  left:
+                    `${
+                      ((tick -
+                        BRANCH_AXIS_MIN) /
+                        (BRANCH_AXIS_MAX -
+                          BRANCH_AXIS_MIN)) *
+                      100
+                    }%`
                 }}
               >
                 {formatCompact(
@@ -425,8 +608,20 @@ function BranchRevenueExpenseChart({
 export default function RevenueExpense() {
   const {
     selectedMonth,
-    selectedBranch
-  } = useDashboard();
+    selectedBranch,
+    language
+  } =
+    useDashboard();
+
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
 
   const filters =
     useMemo(
@@ -444,124 +639,156 @@ export default function RevenueExpense() {
   const [
     revenueAccounts,
     setRevenueAccounts
-  ] = useState([]);
+  ] = useState(
+    []
+  );
 
   const [
     expenseGroups,
     setExpenseGroups
-  ] = useState([]);
+  ] = useState(
+    []
+  );
 
   const [
     branchRevenueExpense,
     setBranchRevenueExpense
-  ] = useState([]);
+  ] = useState(
+    []
+  );
 
   const [
     expenseAccounts,
     setExpenseAccounts
-  ] = useState([]);
+  ] = useState(
+    []
+  );
 
   const [
     loading,
     setLoading
-  ] = useState(true);
+  ] = useState(
+    true
+  );
 
   const [
     error,
     setError
-  ] = useState("");
+  ] = useState(
+    ""
+  );
 
-  useEffect(() => {
-    let mounted = true;
+  useEffect(
+    () => {
+      let mounted =
+        true;
 
-    async function load() {
-      try {
-        setLoading(
-          true
-        );
-
-        setError("");
-
-        const [
-          revenueData,
-          groupsData,
-          branchData,
-          expenseData
-        ] =
-          await Promise.all([
-            getRevenueAccounts(
-              filters
-            ),
-            getExpenseGroups(
-              filters
-            ),
-            getBranchRevenueExpense(
-              filters
-            ),
-            getExpenseAccounts(
-              filters
-            )
-          ]);
-
-        if (!mounted) {
-          return;
-        }
-
-        setRevenueAccounts(
-          Array.isArray(
-            revenueData
-          )
-            ? revenueData
-            : []
-        );
-
-        setExpenseGroups(
-          Array.isArray(
-            groupsData
-          )
-            ? groupsData
-            : []
-        );
-
-        setBranchRevenueExpense(
-          Array.isArray(
-            branchData
-          )
-            ? branchData
-            : []
-        );
-
-        setExpenseAccounts(
-          Array.isArray(
-            expenseData
-          )
-            ? expenseData
-            : []
-        );
-      } catch (err) {
-        if (mounted) {
-          setError(
-            err?.message ||
-              "Data load failed"
-          );
-        }
-      } finally {
-        if (mounted) {
+      async function load() {
+        try {
           setLoading(
-            false
+            true
           );
+
+          setError(
+            ""
+          );
+
+          const [
+            revenueData,
+            groupsData,
+            branchData,
+            expenseData
+          ] =
+            await Promise.all(
+              [
+                getRevenueAccounts(
+                  filters
+                ),
+
+                getExpenseGroups(
+                  filters
+                ),
+
+                getBranchRevenueExpense(
+                  filters
+                ),
+
+                getExpenseAccounts(
+                  filters
+                )
+              ]
+            );
+
+          if (
+            !mounted
+          ) {
+            return;
+          }
+
+          setRevenueAccounts(
+            Array.isArray(
+              revenueData
+            )
+              ? revenueData
+              : []
+          );
+
+          setExpenseGroups(
+            Array.isArray(
+              groupsData
+            )
+              ? groupsData
+              : []
+          );
+
+          setBranchRevenueExpense(
+            Array.isArray(
+              branchData
+            )
+              ? branchData
+              : []
+          );
+
+          setExpenseAccounts(
+            Array.isArray(
+              expenseData
+            )
+              ? expenseData
+              : []
+          );
+        } catch (
+          err
+        ) {
+          if (
+            mounted
+          ) {
+            setError(
+              err?.message ||
+                "Data load failed"
+            );
+          }
+        } finally {
+          if (
+            mounted
+          ) {
+            setLoading(
+              false
+            );
+          }
         }
       }
-    }
 
-    load();
+      load();
 
-    return () => {
-      mounted = false;
-    };
-  }, [
-    filters
-  ]);
+      return () => {
+        mounted =
+          false;
+      };
+    },
+    [
+      filters
+    ]
+  );
 
   const revenueRows =
     useMemo(
@@ -574,10 +801,12 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
       [
@@ -596,10 +825,12 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
       [
@@ -618,10 +849,12 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
       [
@@ -629,21 +862,26 @@ export default function RevenueExpense() {
       ]
     );
 
-  if (loading) {
+  if (
+    loading
+  ) {
     return (
       <div className="revenue-expense-page">
         <div className="page-loading">
-          Loading...
+          {t.loading}
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (
+    error
+  ) {
     return (
       <div className="revenue-expense-page">
         <div className="page-error">
-          Backend error:{" "}
+          {t.backendError}
+          :{" "}
           {error}
         </div>
       </div>
@@ -654,7 +892,9 @@ export default function RevenueExpense() {
     <div className="revenue-expense-page">
       <div className="revenue-expense-grid">
         <Card
-          title="Орлогын дүн дансаар"
+          title={
+            t.incomeByAccount
+          }
           className="revenue-expense-card"
         >
           <HorizontalBarChart
@@ -673,11 +913,19 @@ export default function RevenueExpense() {
             visibleHeight={
               310
             }
+            language={
+              currentLanguage
+            }
+            valueLabel={
+              t.amount
+            }
           />
         </Card>
 
         <Card
-          title="Зардлын бүлгээр"
+          title={
+            t.expenseByCategory
+          }
           className="revenue-expense-card"
         >
           <HorizontalBarChart
@@ -696,22 +944,35 @@ export default function RevenueExpense() {
             visibleHeight={
               310
             }
+            language={
+              currentLanguage
+            }
+            valueLabel={
+              t.amount
+            }
           />
         </Card>
 
         <Card
-          title="Орлого Зардлын дүн салбараар"
+          title={
+            t.incomeExpenseByBranch
+          }
           className="revenue-expense-card"
         >
           <BranchRevenueExpenseChart
             data={
               branchRevenueExpense
             }
+            language={
+              currentLanguage
+            }
           />
         </Card>
 
         <Card
-          title="Зардлын дүн дансаар"
+          title={
+            t.expenseByAccount
+          }
           className="revenue-expense-card"
         >
           <HorizontalBarChart
@@ -729,6 +990,12 @@ export default function RevenueExpense() {
             }
             visibleHeight={
               310
+            }
+            language={
+              currentLanguage
+            }
+            valueLabel={
+              t.amount
             }
           />
         </Card>

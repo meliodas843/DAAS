@@ -41,6 +41,126 @@ import {
   formatTooltipMoney
 } from "../utils/formatters";
 
+const translations = {
+  mn: {
+    loading:
+      "Удирдлагын талбар ачаалж байна...",
+    backendError:
+      "Backend алдаа",
+
+    totalIncome:
+      "Нийт Орлого",
+    totalExpense:
+      "Нийт Зардал",
+    shortReceivable:
+      "Богино Хугацаат Авлага",
+    shortPayable:
+      "Богино Хугацаат Өглөг",
+    operatingProfit:
+      "Үйл ажиллагааны ашиг",
+
+    collectionRate:
+      "Авлага цуглуулалтын хувь сараар",
+    collection:
+      "Цуглуулалт",
+    target:
+      "Зорилт 20%",
+
+    thisMonth:
+      "Энэ сар",
+    previous:
+      "өмнөх",
+    targetNotReached:
+      "Зорилт 20%-д хүрээгүй",
+    month:
+      "сар",
+
+    rentedCount:
+      "Түрээслэгдсэн тоо",
+    utilization:
+      "Ашиглалт %",
+    vacantCount:
+      "Сул тоо",
+
+    receivablesAging:
+      "Авлагын насжилт",
+    payablesAging:
+      "Өглөгийн насжилт",
+
+    financialMonthly:
+      "Нийт Орлого, Зардал, Ашиг сараар",
+
+    income:
+      "Орлого",
+    expense:
+      "Зардал",
+    profit:
+      "Ашиг",
+
+    days:
+      "хоног"
+  },
+
+  en: {
+    loading:
+      "Loading dashboard...",
+    backendError:
+      "Backend error",
+
+    totalIncome:
+      "Total Income",
+    totalExpense:
+      "Total Expense",
+    shortReceivable:
+      "Short-term Receivable",
+    shortPayable:
+      "Short-term Payable",
+    operatingProfit:
+      "Operating Profit",
+
+    collectionRate:
+      "Receivables Collection Rate by Month",
+    collection:
+      "Collection",
+    target:
+      "Target 20%",
+
+    thisMonth:
+      "This month",
+    previous:
+      "previous",
+    targetNotReached:
+      "Target of 20% not reached",
+    month:
+      "months",
+
+    rentedCount:
+      "Number of Units Rented Out",
+    utilization:
+      "Utilization %",
+    vacantCount:
+      "Vacant Count",
+
+    receivablesAging:
+      "Receivables Aging",
+    payablesAging:
+      "Payables Aging",
+
+    financialMonthly:
+      "Total Income, Expense, and Profit by Month",
+
+    income:
+      "Income",
+    expense:
+      "Expense",
+    profit:
+      "Profit",
+
+    days:
+      "days"
+  }
+};
+
 function normalizeMonth(value) {
   if (
     value === null ||
@@ -151,18 +271,74 @@ function findMonthRow(
   );
 }
 
+function translateAgingName(
+  name,
+  language
+) {
+  const value =
+    String(name || "");
+
+  if (
+    language !== "en"
+  ) {
+    return value;
+  }
+
+  return value
+    .replace(
+      /хоног/gi,
+      "days"
+    )
+    .replace(
+      /өдөр/gi,
+      "days"
+    );
+}
+
+function translateAgingData(
+  data,
+  language
+) {
+  if (
+    !Array.isArray(data)
+  ) {
+    return [];
+  }
+
+  return data.map(
+    (item) => ({
+      ...item,
+      name:
+        translateAgingName(
+          item.name,
+          language
+        )
+    })
+  );
+}
+
 function CollectionChart({
-  data
+  data,
+  language
 }) {
+  const t =
+    translations[
+      language === "en"
+        ? "en"
+        : "mn"
+    ];
+
   const safeData =
     Array.isArray(data)
       ? data.map(
           (item) => ({
             ...item,
+
             month:
               formatMonth(
                 item.month
               ),
+
             value:
               Number(
                 item.value || 0
@@ -243,7 +419,8 @@ function CollectionChart({
               `${Number(
                 value || 0
               ).toFixed(1)}%`,
-              "Цуглуулалт"
+
+              t.collection
             ]}
           />
 
@@ -253,12 +430,16 @@ function CollectionChart({
             strokeDasharray="5 4"
             label={{
               value:
-                "Зорилт 20%",
+                t.target,
+
               position:
                 "insideTopRight",
+
               fill:
                 "#ff6423",
+
               fontSize: 10,
+
               fontWeight: 700
             }}
           />
@@ -269,6 +450,13 @@ function CollectionChart({
             stroke="#2467e8"
             strokeWidth={3}
             connectNulls
+            isAnimationActive={
+              true
+            }
+            animationDuration={
+              1200
+            }
+            animationEasing="ease-out"
             dot={(props) => {
               const {
                 cx,
@@ -324,27 +512,39 @@ function CollectionChart({
 }
 
 function FinancialChart({
-  data
+  data,
+  language
 }) {
+  const t =
+    translations[
+      language === "en"
+        ? "en"
+        : "mn"
+    ];
+
   const safeData =
     Array.isArray(data)
       ? data.map(
           (item) => ({
             ...item,
+
             month:
               formatMonth(
                 item.month
               ),
+
             revenue:
               Number(
                 item.revenue ||
                   0
               ),
+
             expense:
               Number(
                 item.expense ||
                   0
               ),
+
             profit:
               Number(
                 item.profit ||
@@ -495,7 +695,9 @@ function FinancialChart({
           <Legend />
 
           <Bar
-            name="Орлого"
+            name={
+              t.income
+            }
             dataKey="revenue"
             fill="#2164e8"
             barSize={13}
@@ -506,8 +708,12 @@ function FinancialChart({
               0
             ]}
             isAnimationActive={
-              false
+              true
             }
+            animationDuration={
+              1000
+            }
+            animationEasing="ease-out"
           >
             <LabelList
               dataKey="revenue"
@@ -518,9 +724,11 @@ function FinancialChart({
           </Bar>
 
           <Bar
-            name="Зардал"
+            name={
+              t.expense
+            }
             dataKey="expense"
-            fill="#75b9ff"
+            fill="#8B5CF6"
             barSize={13}
             radius={[
               3,
@@ -529,8 +737,15 @@ function FinancialChart({
               0
             ]}
             isAnimationActive={
-              false
+              true
             }
+            animationBegin={
+              150
+            }
+            animationDuration={
+              1000
+            }
+            animationEasing="ease-out"
           >
             <LabelList
               dataKey="expense"
@@ -541,18 +756,28 @@ function FinancialChart({
           </Bar>
 
           <Line
-            name="Ашиг"
+            name={
+              t.profit
+            }
             type="monotone"
             dataKey="profit"
             stroke="#f15b16"
             strokeWidth={2}
             dot={{
               r: 4,
-              fill: "#f15b16"
+              fill:
+                "#f15b16"
             }}
             isAnimationActive={
-              false
+              true
             }
+            animationBegin={
+              300
+            }
+            animationDuration={
+              1200
+            }
+            animationEasing="ease-out"
           />
         </BarChart>
       </ResponsiveContainer>
@@ -580,27 +805,52 @@ function MiniStat({
 export default function Dashboard() {
   const {
     selectedMonth,
-    selectedBranch
+    selectedBranch,
+    language
   } = useDashboard();
+
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
 
   const [
     kpis,
     setKpis
   ] = useState({
     revenue: 0,
+
     revenue_previous: 0,
+
     revenue_change: 0,
+
     expense: 0,
+
     expense_previous: 0,
+
     expense_change: 0,
+
     receivable: 0,
+
     receivable_previous: 0,
+
     receivable_change: 0,
+
     payable: 0,
+
     payable_previous: 0,
+
     payable_change: 0,
+
     net_profit: 0,
+
     net_profit_previous: 0,
+
     net_profit_change: 0
   });
 
@@ -645,11 +895,15 @@ export default function Dashboard() {
   ] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    let mounted =
+      true;
 
     async function loadDashboard() {
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
+
         setError("");
 
         const filters =
@@ -675,18 +929,23 @@ export default function Dashboard() {
             getKpis(
               filters
             ),
+
             getAreaStats(
               filters
             ),
+
             getCollectionRate(
               monthlyFilters
             ),
+
             getRevenueMonthly(
               monthlyFilters
             ),
+
             getReceivableAging(
               filters
             ),
+
             getPayableAging(
               filters
             )
@@ -699,91 +958,106 @@ export default function Dashboard() {
         setKpis({
           revenue:
             Number(
-              kpiData?.revenue ||
+              kpiData
+                ?.revenue ||
                 0
             ),
 
           revenue_previous:
             Number(
-              kpiData?.revenue_previous ||
+              kpiData
+                ?.revenue_previous ||
                 0
             ),
 
           revenue_change:
             Number(
-              kpiData?.revenue_change ||
+              kpiData
+                ?.revenue_change ||
                 0
             ),
 
           expense:
             Number(
-              kpiData?.expense ||
+              kpiData
+                ?.expense ||
                 0
             ),
 
           expense_previous:
             Number(
-              kpiData?.expense_previous ||
+              kpiData
+                ?.expense_previous ||
                 0
             ),
 
           expense_change:
             Number(
-              kpiData?.expense_change ||
+              kpiData
+                ?.expense_change ||
                 0
             ),
 
           receivable:
             Number(
-              kpiData?.receivable ||
+              kpiData
+                ?.receivable ||
                 0
             ),
 
           receivable_previous:
             Number(
-              kpiData?.receivable_previous ||
+              kpiData
+                ?.receivable_previous ||
                 0
             ),
 
           receivable_change:
             Number(
-              kpiData?.receivable_change ||
+              kpiData
+                ?.receivable_change ||
                 0
             ),
 
           payable:
             Number(
-              kpiData?.payable ||
+              kpiData
+                ?.payable ||
                 0
             ),
 
           payable_previous:
             Number(
-              kpiData?.payable_previous ||
+              kpiData
+                ?.payable_previous ||
                 0
             ),
 
           payable_change:
             Number(
-              kpiData?.payable_change ||
+              kpiData
+                ?.payable_change ||
                 0
             ),
 
           net_profit:
             Number(
-              kpiData?.net_profit ||
+              kpiData
+                ?.net_profit ||
                 0
             ),
 
           net_profit_previous:
             Number(
-              kpiData?.net_profit_previous ||
+              kpiData
+                ?.net_profit_previous ||
                 0
             ),
 
           net_profit_change:
             Number(
-              kpiData?.net_profit_change ||
+              kpiData
+                ?.net_profit_change ||
                 0
             )
         });
@@ -791,25 +1065,29 @@ export default function Dashboard() {
         setAreaStats({
           rented:
             Number(
-              areaData?.rented ||
+              areaData
+                ?.rented ||
                 0
             ),
 
           total:
             Number(
-              areaData?.total ||
+              areaData
+                ?.total ||
                 0
             ),
 
           vacant:
             Number(
-              areaData?.vacant ||
+              areaData
+                ?.vacant ||
                 0
             ),
 
           utilization:
             Number(
-              areaData?.utilization ||
+              areaData
+                ?.utilization ||
                 0
             )
         });
@@ -859,7 +1137,9 @@ export default function Dashboard() {
         }
       } finally {
         if (mounted) {
-          setLoading(false);
+          setLoading(
+            false
+          );
         }
       }
     }
@@ -878,9 +1158,12 @@ export default function Dashboard() {
     useMemo(() => {
       if (
         !selectedMonth ||
-        selectedMonth === "all" ||
-        selectedMonth === "Бүгд" ||
-        selectedMonth === "БҮГД"
+        selectedMonth ===
+          "all" ||
+        selectedMonth ===
+          "Бүгд" ||
+        selectedMonth ===
+          "БҮГД"
       ) {
         return "";
       }
@@ -912,7 +1195,9 @@ export default function Dashboard() {
         return null;
       }
 
-      if (!selectedMonthKey) {
+      if (
+        !selectedMonthKey
+      ) {
         if (
           collectionMonthly.length <
           2
@@ -953,31 +1238,36 @@ export default function Dashboard() {
 
   const collectionCurrentValue =
     Number(
-      selectedCollection?.value ??
+      selectedCollection
+        ?.value ??
         0
     );
 
   const collectionPreviousValue =
     Number(
-      previousCollection?.value ??
+      previousCollection
+        ?.value ??
         0
     );
 
   const selectedRevenue =
     Number(
-      selectedFinancial?.revenue ??
+      selectedFinancial
+        ?.revenue ??
         0
     );
 
   const selectedExpense =
     Number(
-      selectedFinancial?.expense ??
+      selectedFinancial
+        ?.expense ??
         0
     );
 
   const selectedProfit =
     Number(
-      selectedFinancial?.profit ??
+      selectedFinancial
+        ?.profit ??
         (
           selectedRevenue -
           selectedExpense
@@ -990,7 +1280,8 @@ export default function Dashboard() {
         collectionMonthly.filter(
           (item) =>
             Number(
-              item.value || 0
+              item.value ||
+                0
             ) < 20
         ).length,
       [
@@ -998,11 +1289,37 @@ export default function Dashboard() {
       ]
     );
 
+  const translatedReceivableAging =
+    useMemo(
+      () =>
+        translateAgingData(
+          receivableAging,
+          currentLanguage
+        ),
+      [
+        receivableAging,
+        currentLanguage
+      ]
+    );
+
+  const translatedPayableAging =
+    useMemo(
+      () =>
+        translateAgingData(
+          payableAging,
+          currentLanguage
+        ),
+      [
+        payableAging,
+        currentLanguage
+      ]
+    );
+
   if (loading) {
     return (
       <div className="dashboard-page">
         <div className="page-loading">
-          Loading dashboard...
+          {t.loading}
         </div>
       </div>
     );
@@ -1012,7 +1329,8 @@ export default function Dashboard() {
     return (
       <div className="dashboard-page">
         <div className="page-error">
-          Backend error:{" "}
+          {t.backendError}
+          :{" "}
           {error}
         </div>
       </div>
@@ -1029,9 +1347,14 @@ export default function Dashboard() {
           previousValue={
             kpis.revenue_previous
           }
-          label="Нийт Орлого"
+          label={
+            t.totalIncome
+          }
           change={
             kpis.revenue_change
+          }
+          language={
+            currentLanguage
           }
         />
 
@@ -1042,11 +1365,16 @@ export default function Dashboard() {
           previousValue={
             kpis.expense_previous
           }
-          label="Нийт Зардал"
+          label={
+            t.totalExpense
+          }
           change={
             kpis.expense_change
           }
           inverse
+          language={
+            currentLanguage
+          }
         />
 
         <KpiCard
@@ -1056,11 +1384,16 @@ export default function Dashboard() {
           previousValue={
             kpis.receivable_previous
           }
-          label="Богино Хугацаат Авлага"
+          label={
+            t.shortReceivable
+          }
           change={
             kpis.receivable_change
           }
           warning
+          language={
+            currentLanguage
+          }
         />
 
         <KpiCard
@@ -1070,9 +1403,15 @@ export default function Dashboard() {
           previousValue={
             kpis.payable_previous
           }
-          label="Богино Хугацаат Өглөг"
+          label={
+            t.shortPayable
+          }
           change={
             kpis.payable_change
+          }
+          inverse
+          language={
+            currentLanguage
           }
         />
 
@@ -1083,43 +1422,67 @@ export default function Dashboard() {
           previousValue={
             kpis.net_profit_previous
           }
-          label="Үйл ажиллагааны ашиг"
+          label={
+            t.operatingProfit
+          }
           change={
             kpis.net_profit_change
           }
           warning
+          language={
+            currentLanguage
+          }
         />
       </div>
 
       <div className="dashboard-summary-row">
         <Card
-          title="Авлага цуглуулалтын хувь сараар"
+          title={
+            t.collectionRate
+          }
           className="collection-card dashboard-summary-collection"
         >
           <CollectionChart
             data={
               collectionMonthly
             }
+            language={
+              currentLanguage
+            }
           />
 
           <div className="chart-summary">
-            Энэ сар:{" "}
+            {t.thisMonth}:{" "}
+
             <strong>
               {collectionCurrentValue.toFixed(
                 1
               )}
               %
-            </strong>{" "}
-            (өмнөх:{" "}
+            </strong>
+
+            {" "}
+            (
+            {t.previous}:{" "}
+
             {collectionPreviousValue.toFixed(
               1
             )}
-            %) ·{" "}
+            %)
+
+            {" · "}
+
             <span>
-              ⚠ Зорилт 20%-д хүрээгүй:{" "}
+              ⚠{" "}
+              {t.targetNotReached}
+              :{" "}
+
               {missedTargetCount}/
-              {collectionMonthly.length}{" "}
-              сар
+
+              {collectionMonthly.length}
+              {" "}
+
+              {t.month}
             </span>
           </div>
         </Card>
@@ -1132,7 +1495,9 @@ export default function Dashboard() {
             ).toLocaleString(
               "en-US"
             )}
-            label="Түрээслэгдсэн тоо"
+            label={
+              t.rentedCount
+            }
           />
 
           <MiniStat
@@ -1140,7 +1505,9 @@ export default function Dashboard() {
               areaStats.utilization ||
                 0
             ).toFixed(2)}%`}
-            label="Ашиглалт %"
+            label={
+              t.utilization
+            }
           />
 
           <MiniStat
@@ -1150,17 +1517,21 @@ export default function Dashboard() {
             ).toLocaleString(
               "en-US"
             )}
-            label="Сул тоо"
+            label={
+              t.vacantCount
+            }
           />
         </div>
 
         <Card
-          title="Авлагын насжилт"
+          title={
+            t.receivablesAging
+          }
           className="aging-card dashboard-summary-aging"
         >
           <AgingDonut
             data={
-              receivableAging
+              translatedReceivableAging
             }
             previous=""
           />
@@ -1169,34 +1540,55 @@ export default function Dashboard() {
 
       <div className="dashboard-bottom-row">
         <Card
-          title="Нийт Орлого, Зардал, Ашиг сараар"
+          title={
+            t.financialMonthly
+          }
           className="financial-card"
         >
           <FinancialChart
             data={
               incomeExpenseMonthly
             }
+            language={
+              currentLanguage
+            }
           />
 
           <div className="chart-summary">
-            Энэ сар: Орлого{" "}
+            {t.thisMonth}
+            :{" "}
+
+            {t.income}
+            {" "}
+
             <strong>
               {formatMoney(
                 selectedRevenue,
                 true
               )}
-            </strong>{" "}
-            / Зардал{" "}
+            </strong>
+
+            {" / "}
+
+            {t.expense}
+            {" "}
+
             <strong>
               {formatMoney(
                 selectedExpense,
                 true
               )}
-            </strong>{" "}
-            · Ашиг:{" "}
+            </strong>
+
+            {" · "}
+
+            {t.profit}
+            :{" "}
+
             <strong
               className={
-                selectedProfit < 0
+                selectedProfit <
+                0
                   ? "negative-money"
                   : ""
               }
@@ -1210,12 +1602,14 @@ export default function Dashboard() {
         </Card>
 
         <Card
-          title="Өглөгийн насжилт"
+          title={
+            t.payablesAging
+          }
           className="aging-card"
         >
           <AgingDonut
             data={
-              payableAging
+              translatedPayableAging
             }
             previous=""
           />

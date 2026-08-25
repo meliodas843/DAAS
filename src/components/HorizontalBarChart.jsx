@@ -9,6 +9,8 @@ import {
   YAxis
 } from "recharts";
 
+import HoverScroll from "./HoverScroll";
+
 function formatCompact(value) {
   const number =
     Number(value || 0);
@@ -91,13 +93,17 @@ function wrapLabel(
   }
 
   const words =
-    String(text).split(" ");
+    String(
+      text
+    ).split(" ");
 
   const lines = [];
 
   let current = "";
 
-  for (const word of words) {
+  for (
+    const word of words
+  ) {
     const next =
       current
         ? `${current} ${word}`
@@ -107,7 +113,8 @@ function wrapLabel(
       next.length <=
       maxLength
     ) {
-      current = next;
+      current =
+        next;
     } else {
       if (current) {
         lines.push(
@@ -115,7 +122,8 @@ function wrapLabel(
         );
       }
 
-      current = word;
+      current =
+        word;
     }
   }
 
@@ -213,7 +221,9 @@ function ValueLabel({
       number
     );
 
-  if (number > 0) {
+  if (
+    number > 0
+  ) {
     return (
       <text
         x={
@@ -233,12 +243,13 @@ function ValueLabel({
     );
   }
 
-  const zeroX =
-    x + width;
-
   return (
     <text
-      x={zeroX - 8}
+      x={
+        x +
+        width -
+        8
+      }
       y={centerY}
       dominantBaseline="middle"
       textAnchor="end"
@@ -251,7 +262,9 @@ function ValueLabel({
   );
 }
 
-function calculateAxis(data) {
+function calculateAxis(
+  data
+) {
   const values =
     data.map(
       (item) =>
@@ -274,7 +287,9 @@ function calculateAxis(data) {
 
   let min = 0;
 
-  if (minValue < 0) {
+  if (
+    minValue < 0
+  ) {
     const absMin =
       Math.abs(
         minValue
@@ -313,7 +328,7 @@ function calculateAxis(data) {
 
   if (
     maxValue >
-    3_000_000_000
+    max
   ) {
     max =
       Math.ceil(
@@ -335,33 +350,31 @@ function createTicks(
 ) {
   const ticks = [];
 
-  if (min < 0) {
-    if (
-      min <=
+  if (
+    min <=
+    -2_000_000_000
+  ) {
+    ticks.push(
       -2_000_000_000
-    ) {
-      ticks.push(
-        -2_000_000_000
-      );
-    }
+    );
+  }
 
-    if (
-      min <=
+  if (
+    min <=
+    -1_000_000_000
+  ) {
+    ticks.push(
       -1_000_000_000
-    ) {
-      ticks.push(
-        -1_000_000_000
-      );
-    }
+    );
+  }
 
-    if (
-      min <=
+  if (
+    min <=
+    -500_000_000
+  ) {
+    ticks.push(
       -500_000_000
-    ) {
-      ticks.push(
-        -500_000_000
-      );
-    }
+    );
   }
 
   ticks.push(0);
@@ -387,11 +400,7 @@ function createTicks(
   for (
     let value =
       2_000_000_000;
-    value <=
-      Math.min(
-        max,
-        5_000_000_000
-      );
+    value <= max;
     value +=
       1_000_000_000
   ) {
@@ -401,7 +410,9 @@ function createTicks(
   }
 
   return [
-    ...new Set(ticks)
+    ...new Set(
+      ticks
+    )
   ].sort(
     (a, b) =>
       a - b
@@ -412,10 +423,20 @@ export default function HorizontalBarChart({
   data = [],
   color = "#2966e8",
   yAxisWidth = 220,
-  rowHeight = 40,
+  rowHeight = 52,
   barSize = 20,
-  visibleHeight = 310
+  visibleHeight = 285,
+  language = "mn",
+  valueLabel
 }) {
+  const tooltipLabel =
+    valueLabel ||
+    (
+      language === "en"
+        ? "Amount"
+        : "Дүн"
+    );
+
   const safeData =
     Array.isArray(data)
       ? data.map(
@@ -423,18 +444,26 @@ export default function HorizontalBarChart({
             ...item,
             value:
               Number(
-                item.value || 0
+                item.value ||
+                  0
               )
           })
         )
       : [];
 
+  const actualRowHeight =
+    Math.max(
+      rowHeight,
+      52
+    );
+
   const chartHeight =
     Math.max(
-      visibleHeight,
+      visibleHeight +
+        1,
       safeData.length *
-        rowHeight +
-        10
+        actualRowHeight +
+        18
     );
 
   const {
@@ -459,12 +488,9 @@ export default function HorizontalBarChart({
 
   return (
     <div className="fixed-axis-chart">
-      <div
-        className="fixed-axis-chart-scroll"
-        style={{
-          height:
-            `${visibleHeight}px`
-        }}
+      <HoverScroll
+        direction="vertical"
+        className="fixed-axis-hover-scroll"
       >
         <div
           className="fixed-axis-chart-body"
@@ -488,11 +514,15 @@ export default function HorizontalBarChart({
                 left:
                   chartLeftMargin
               }}
-              barCategoryGap={12}
+              barCategoryGap={
+                12
+              }
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                horizontal={false}
+                horizontal={
+                  false
+                }
                 stroke="#edf1f7"
               />
 
@@ -512,8 +542,12 @@ export default function HorizontalBarChart({
                 width={
                   yAxisWidth
                 }
-                axisLine={false}
-                tickLine={false}
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
                 interval={0}
                 tick={
                   <CustomYAxisTick />
@@ -531,13 +565,15 @@ export default function HorizontalBarChart({
                   formatTooltip(
                     value
                   ),
-                  "Дүн"
+                  tooltipLabel
                 ]}
               />
 
               <Bar
                 dataKey="value"
-                fill={color}
+                fill={
+                  color
+                }
                 barSize={
                   barSize
                 }
@@ -548,8 +584,15 @@ export default function HorizontalBarChart({
                   0
                 ]}
                 isAnimationActive={
-                  false
+                  true
                 }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
+                animationEasing="ease-out"
               >
                 <LabelList
                   dataKey="value"
@@ -561,7 +604,7 @@ export default function HorizontalBarChart({
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </HoverScroll>
 
       <div className="shared-bottom-axis">
         <div
@@ -590,63 +633,15 @@ export default function HorizontalBarChart({
                     ) *
                     100;
 
-              let transform =
-                "translateX(-50%)";
-
-              if (
-                axisMin < 0 &&
-                tick ===
-                  -500_000_000
-              ) {
-                transform =
-                  "translateX(-90%)";
-              }
-
-              if (
-                axisMin < 0 &&
-                tick === 0
-              ) {
-                transform =
-                  "translateX(-65%)";
-              }
-
-              if (
-                axisMin < 0 &&
-                tick ===
-                  500_000_000
-              ) {
-                transform =
-                  "translateX(-65%)";
-              }
-
-              if (
-                tick ===
-                  axisTicks[0] &&
-                axisMin >= 0
-              ) {
-                transform =
-                  "translateX(0)";
-              }
-
-              if (
-                tick ===
-                axisTicks[
-                  axisTicks.length -
-                    1
-                ]
-              ) {
-                transform =
-                  "translateX(-100%)";
-              }
-
               return (
                 <span
-                  key={tick}
+                  key={
+                    tick
+                  }
                   className="shared-bottom-axis-tick"
                   style={{
                     left:
-                      `${position}%`,
-                    transform
+                      `${position}%`
                   }}
                 >
                   {formatCompact(

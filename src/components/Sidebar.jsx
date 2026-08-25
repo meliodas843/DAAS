@@ -22,7 +22,7 @@ const baseItems = [
   {
     to: "/",
     mn: "Удирдлагын талбар",
-    en: "Dashboard",
+    en: "Executive Overview ",
     icon: LayoutDashboard
   },
   {
@@ -42,7 +42,7 @@ const baseItems = [
     mn: "Орлого / Зардал",
     en: "Revenue / Expense",
     icon: ChartNoAxesCombined
-  }
+  },
 ];
 
 export default function Sidebar() {
@@ -185,7 +185,7 @@ export default function Sidebar() {
             title={
               sidebarCollapsed
                 ? language === "mn"
-                  ? "Тохиргоо"
+                  ? "Тохи"
                   : "Settings"
                 : undefined
             }

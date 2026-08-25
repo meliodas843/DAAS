@@ -7,6 +7,7 @@ import {
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+import SessionWatcher from "./components/SessionWatcher";
 
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
@@ -19,62 +20,14 @@ import Users from "./pages/Users";
 
 export default function App() {
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <Login />
-        }
-      />
+    <>
+      <SessionWatcher />
 
-      <Route
-        path="/change-password"
-        element={
-          <ProtectedRoute>
-            <ChangePassword />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Routes>
         <Route
-          path="/"
+          path="/login"
           element={
-            <Dashboard />
-          }
-        />
-
-        <Route
-          path="/receivables"
-          element={
-            <Receivables />
-          }
-        />
-
-        <Route
-          path="/payables"
-          element={
-            <Payables />
-          }
-        />
-
-        <Route
-          path="/revenue-expense"
-          element={
-            <RevenueExpense />
-          }
-        />
-
-        <Route
-          path="/cash-flow"
-          element={
-            <CashFlow />
+            <Login />
           }
         />
 
@@ -88,24 +41,67 @@ export default function App() {
         />
 
         <Route
-          path="/users"
           element={
-            <AdminRoute>
-              <Users />
-            </AdminRoute>
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            path="/"
+            element={
+              <Dashboard />
+            }
+          />
+
+          <Route
+            path="/receivables"
+            element={
+              <Receivables />
+            }
+          />
+
+          <Route
+            path="/payables"
+            element={
+              <Payables />
+            }
+          />
+
+          <Route
+            path="/revenue-expense"
+            element={
+              <RevenueExpense />
+            }
+          />
+
+          <Route
+            path="/cash-flow"
+            element={
+              <CashFlow />
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <AdminRoute>
+                <Users />
+              </AdminRoute>
+            }
+          />
+        </Route>
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
           }
         />
-      </Route>
-
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to="/login"
-            replace
-          />
-        }
-      />
-    </Routes>
+      </Routes>
+    </>
   );
 }

@@ -10,8 +10,35 @@ import {
 } from "../context/AuthContext";
 
 const API =
-  import.meta.env.VITE_API_URL ||
+  import.meta.env
+    .VITE_API_URL ||
   "http://localhost:8000/api";
+
+const translations = {
+  mn: {
+    login: "Нэвтрэх",
+    subtitle:
+      "Удирдлагын самбарт нэвтрэх",
+    email: "И-мэйл",
+    password: "Нууц үг",
+    loading:
+      "Нэвтэрч байна...",
+    error:
+      "Нэвтрэхэд алдаа гарлаа"
+  },
+
+  en: {
+    login: "Login",
+    subtitle:
+      "Sign in to the dashboard",
+    email: "Email",
+    password: "Password",
+    loading:
+      "Signing in...",
+    error:
+      "Failed to sign in"
+  }
+};
 
 export default function Login() {
   const navigate =
@@ -22,6 +49,17 @@ export default function Login() {
     authenticated,
     user
   } = useAuth();
+
+  const [
+    language,
+    setLanguage
+  ] = useState(() => {
+    return (
+      localStorage.getItem(
+        "language"
+      ) || "mn"
+    );
+  });
 
   const [
     email,
@@ -43,9 +81,31 @@ export default function Login() {
     setLoading
   ] = useState(false);
 
-  if (authenticated) {
+  const t =
+    translations[language];
+
+  function changeLanguage(
+    nextLanguage
+  ) {
+    setLanguage(
+      nextLanguage
+    );
+
+    localStorage.setItem(
+      "language",
+      nextLanguage
+    );
+
+    setError("");
+  }
+
+  if (
+    authenticated
+  ) {
     if (
-      user?.must_change_password === true
+      user
+        ?.must_change_password ===
+      true
     ) {
       return (
         <Navigate
@@ -92,23 +152,33 @@ export default function Login() {
           }
         );
 
-      const data =
-        await response.json();
+      let data = null;
 
-      if (!response.ok) {
+      try {
+        data =
+          await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (
+        !response.ok
+      ) {
         throw new Error(
           data?.message ||
-            "Нэвтрэхэд алдаа гарлаа"
+            t.error
         );
       }
 
       const nextUser = {
         ...data.user,
+
         must_change_password:
           Boolean(
             data.user
               ?.must_change_password ??
-              data.must_change_password
+              data
+                .must_change_password
           )
       };
 
@@ -117,8 +187,16 @@ export default function Login() {
         nextUser
       );
 
+      localStorage.setItem(
+        "last_activity_at",
+        String(
+          Date.now()
+        )
+      );
+
       if (
-        nextUser.must_change_password
+        nextUser
+          .must_change_password
       ) {
         navigate(
           "/change-password",
@@ -130,13 +208,16 @@ export default function Login() {
         return;
       }
 
-      navigate("/", {
-        replace: true
-      });
+      navigate(
+        "/",
+        {
+          replace: true
+        }
+      );
     } catch (err) {
       setError(
         err?.message ||
-          "Нэвтрэхэд алдаа гарлаа"
+          t.error
       );
     } finally {
       setLoading(false);
@@ -146,9 +227,61 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-panel">
+        <div className="login-language-switcher">
+          <button
+            type="button"
+            className={`login-language-button ${
+              language === "en"
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              changeLanguage(
+                "en"
+              )
+            }
+            aria-label="English"
+          >
+            <span className="login-language-flag">
+              🇬🇧
+            </span>
+
+            <span>
+              EN
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`login-language-button ${
+              language === "mn"
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              changeLanguage(
+                "mn"
+              )
+            }
+            aria-label="Монгол"
+          >
+            <span className="login-language-flag">
+              🇲🇳
+            </span>
+
+            <span>
+              MN
+            </span>
+          </button>
+        </div>
+
         <div className="login-brand">
           <div className="login-brand-icon">
-            M
+            <img
+              src="/misheel.jpeg"
+              alt="Misheel"
+              className="login-brand-image"
+            />
           </div>
 
           <div>
@@ -169,11 +302,11 @@ export default function Login() {
           }
         >
           <h1>
-            Нэвтрэх
+            {t.login}
           </h1>
 
           <p>
-            Удирдлагын самбарт нэвтрэх
+            {t.subtitle}
           </p>
 
           {error && (
@@ -183,7 +316,7 @@ export default function Login() {
           )}
 
           <label>
-            И-мэйл
+            {t.email}
           </label>
 
           <input
@@ -197,13 +330,15 @@ export default function Login() {
                   .value
               )
             }
-            placeholder="user@misheel.mn"
+            placeholder={
+              t.emailPlaceholder
+            }
             autoComplete="email"
             required
           />
 
           <label>
-            Нууц үг
+            {t.password}
           </label>
 
           <input
@@ -217,18 +352,19 @@ export default function Login() {
                   .value
               )
             }
-            placeholder="••••••••"
             autoComplete="current-password"
             required
           />
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={
+              loading
+            }
           >
             {loading
-              ? "Нэвтэрч байна..."
-              : "Нэвтрэх"}
+              ? t.loading
+              : t.login}
           </button>
         </form>
       </div>

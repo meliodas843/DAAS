@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState
+} from "react";
 import Card from "../components/Card";
 import HorizontalBarChart from "../components/HorizontalBarChart";
 import ChangeBarChart from "../components/ChangeBarChart";
@@ -9,27 +12,125 @@ import {
   getPayableChanges,
   getPayableMonthly
 } from "../api/dashboardApi";
+import {
+  useDashboard
+} from "../context/DashboardContext";
+
+const translations = {
+  mn: {
+    loading:
+      "Уншиж байна...",
+    backendError:
+      "Backend алдаа",
+
+    byAccount:
+      "Өглөгийн дүн дансаар",
+
+    monthlyChange:
+      "Сарын Өглөгийн Өөрчлөлт",
+
+    byBranch:
+      "Өглөгийн дүн салбараар",
+
+    byMonth:
+      "Өглөгийн дүн сараар",
+
+    amount:
+      "Дүн",
+
+    change:
+      "Өөрчлөлт"
+  },
+
+  en: {
+    loading:
+      "Loading...",
+    backendError:
+      "Backend error",
+
+    byAccount:
+      "Payables Amount by Account",
+
+    monthlyChange:
+      "Monthly Payables Change",
+
+    byBranch:
+      "Payables Amount by Branch",
+
+    byMonth:
+      "Payables Amount by Month",
+
+    amount:
+      "Amount",
+
+    change:
+      "Change"
+  }
+};
 
 export default function Payables() {
-  const [accounts, setAccounts] = useState([]);
-  const [changes, setChanges] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [monthly, setMonthly] = useState([]);
+  const {
+    language
+  } = useDashboard();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
+
+  const [
+    accounts,
+    setAccounts
+  ] = useState([]);
+
+  const [
+    changes,
+    setChanges
+  ] = useState([]);
+
+  const [
+    branches,
+    setBranches
+  ] = useState([]);
+
+  const [
+    monthly,
+    setMonthly
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
+
+  const [
+    error,
+    setError
+  ] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    let mounted =
+      true;
 
     async function load() {
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
+
         setError("");
 
         const filters = {
-          date_from: "2026-01-01",
-          date_to: "2026-08-31"
+          date_from:
+            "2026-01-01",
+
+          date_to:
+            "2026-08-31"
         };
 
         const [
@@ -37,52 +138,82 @@ export default function Payables() {
           changesData,
           branchesData,
           monthlyData
-        ] = await Promise.all([
-          getPayableAccounts(filters),
-          getPayableChanges(filters),
-          getPayableBranches(filters),
-          getPayableMonthly(filters)
-        ]);
+        ] =
+          await Promise.all([
+            getPayableAccounts(
+              filters
+            ),
 
-        if (!mounted) {
+            getPayableChanges(
+              filters
+            ),
+
+            getPayableBranches(
+              filters
+            ),
+
+            getPayableMonthly(
+              filters
+            )
+          ]);
+
+        if (
+          !mounted
+        ) {
           return;
         }
 
         setAccounts(
-          Array.isArray(accountsData)
+          Array.isArray(
+            accountsData
+          )
             ? accountsData
             : []
         );
 
         setChanges(
-          Array.isArray(changesData)
+          Array.isArray(
+            changesData
+          )
             ? changesData
             : []
         );
 
         setBranches(
-          Array.isArray(branchesData)
+          Array.isArray(
+            branchesData
+          )
             ? branchesData
             : []
         );
 
         setMonthly(
-          Array.isArray(monthlyData)
+          Array.isArray(
+            monthlyData
+          )
             ? monthlyData
             : []
         );
       } catch (err) {
-        console.error(err);
+        console.error(
+          err
+        );
 
-        if (mounted) {
+        if (
+          mounted
+        ) {
           setError(
             err?.message ||
               "Data load failed"
           );
         }
       } finally {
-        if (mounted) {
-          setLoading(false);
+        if (
+          mounted
+        ) {
+          setLoading(
+            false
+          );
         }
       }
     }
@@ -90,54 +221,107 @@ export default function Payables() {
     load();
 
     return () => {
-      mounted = false;
+      mounted =
+        false;
     };
   }, []);
 
-  if (loading) {
+  if (
+    loading
+  ) {
     return (
       <div className="page-loading">
-        Loading...
+        {t.loading}
       </div>
     );
   }
 
-  if (error) {
+  if (
+    error
+  ) {
     return (
       <div className="page-error">
-        Backend error: {error}
+        {t.backendError}
+        :{" "}
+        {error}
       </div>
     );
   }
 
   return (
     <div className="page-grid page-grid-2">
-      <Card title="Өглөгийн дүн дансаар">
+      <Card
+        title={
+          t.byAccount
+        }
+      >
         <HorizontalBarChart
-          data={accounts}
-        />
-      </Card>
-
-      <Card title="Сарын Өглөгийн Өөрчлөлт">
-        <ChangeBarChart
-          data={changes}
-        />
-      </Card>
-
-      <Card title="Өглөгийн дүн салбараар">
-        <HorizontalBarChart
-          data={branches}
-          color="#2966e8"
+          data={
+            accounts
+          }
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
         />
       </Card>
 
       <Card
-        title="Өглөгийн дүн сараар"
+        title={
+          t.monthlyChange
+        }
+      >
+        <ChangeBarChart
+          data={
+            changes
+          }
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.change
+          }
+        />
+      </Card>
+
+      <Card
+        title={
+          t.byBranch
+        }
+      >
+        <HorizontalBarChart
+          data={
+            branches
+          }
+          color="#2966e8"
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
+        />
+      </Card>
+
+      <Card
+        title={
+          t.byMonth
+        }
         className="monthly-card"
       >
         <MonthlyBarChart
-          data={monthly}
+          data={
+            monthly
+          }
           color="#a394eb"
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
         />
       </Card>
     </div>

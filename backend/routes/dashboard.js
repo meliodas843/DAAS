@@ -22,7 +22,9 @@ router.get(
       let activeDateFilter = "";
 
       if (refDate) {
-        values.push(refDate);
+        values.push(
+          refDate
+        );
 
         activeDateFilter = `
           AND (
@@ -45,17 +47,22 @@ router.get(
         branch_id !== "all"
       ) {
         const branchNumber =
-          Number(branch_id);
+          Number(
+            branch_id
+          );
 
         if (
-          !Number.isFinite(
+          !Number.isInteger(
             branchNumber
           )
         ) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid branch"
-          });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message:
+                "Invalid branch"
+            });
         }
 
         values.push(
@@ -75,11 +82,12 @@ router.get(
           SELECT
             COUNT(*) FILTER (
               WHERE
-                is_rented = true
+                category = 'rented'
+                AND is_rented = true
                 AND is_active = true
                 ${activeDateFilter}
                 ${branchFilter}
-            ) AS rented,
+            )::int AS rented,
 
             COUNT(*) FILTER (
               WHERE
@@ -87,7 +95,7 @@ router.get(
                 AND is_active = true
                 ${activeDateFilter}
                 ${branchFilter}
-            ) AS total,
+            )::int AS total,
 
             COUNT(*) FILTER (
               WHERE
@@ -96,27 +104,30 @@ router.get(
                 AND is_rented = false
                 ${activeDateFilter}
                 ${branchFilter}
-            ) AS vacant
+            )::int AS vacant
 
           FROM public.partnership_registration
           `,
           values
         );
 
-      const rented = Number(
-        result.rows[0]?.rented ||
-          0
-      );
+      const rented =
+        Number(
+          result.rows[0]
+            ?.rented ?? 0
+        );
 
-      const total = Number(
-        result.rows[0]?.total ||
-          0
-      );
+      const total =
+        Number(
+          result.rows[0]
+            ?.total ?? 0
+        );
 
-      const vacant = Number(
-        result.rows[0]?.vacant ||
-          0
-      );
+      const vacant =
+        Number(
+          result.rows[0]
+            ?.vacant ?? 0
+        );
 
       const utilization =
         total > 0
@@ -132,6 +143,7 @@ router.get(
           : 0;
 
       return res.json({
+        success: true,
         rented,
         total,
         vacant,
@@ -143,10 +155,13 @@ router.get(
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Internal server error"
+        });
     }
   }
 );

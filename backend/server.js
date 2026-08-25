@@ -14,6 +14,7 @@ import payablesRouter from "./routes/payables.js";
 import revenueExpenseRouter from "./routes/revenueExpense.js";
 import cashFlowRouter from "./routes/cashFlow.js";
 import branchesRouter from "./routes/branches.js";
+import usersRoutes from "./routes/users.js";
 
 import {
   requireAuth,
@@ -67,12 +68,14 @@ app.get(
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        connected: false,
-        message:
-          "Database unavailable"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          connected: false,
+          message:
+            "Database unavailable"
+        });
     }
   }
 );
@@ -80,6 +83,11 @@ app.get(
 app.use(
   "/api",
   authRouter
+);
+
+app.use(
+  "/api/users",
+  usersRoutes
 );
 
 const financialGuards = [
@@ -143,11 +151,13 @@ app.get(
 
 app.use(
   (req, res) => {
-    return res.status(404).json({
-      success: false,
-      message:
-        "Not found"
-    });
+    return res
+      .status(404)
+      .json({
+        success: false,
+        message:
+          "Not found"
+      });
   }
 );
 
@@ -163,11 +173,13 @@ app.use(
       error
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Internal server error"
-    });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message:
+          "Internal server error"
+      });
   }
 );
 

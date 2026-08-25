@@ -2,31 +2,69 @@ import {
   useEffect,
   useState
 } from "react";
-import { useLocation}  from "react-router-dom";
-import { CalendarDays, Building2} from "lucide-react";
-import { useDashboard} from "../context/DashboardContext";
-import { getBranches } from "../api/dashboardApi";
+
+import {
+  useLocation
+} from "react-router-dom";
+
+import {
+  CalendarDays,
+  Building2
+} from "lucide-react";
+
+import {
+  useDashboard
+} from "../context/DashboardContext";
+
+import {
+  getBranches
+} from "../api/dashboardApi";
 
 const titles = {
   mn: {
-    "/": "Тохиргоо",
-    "/receivables": "Авлага",
-    "/payables": "Өглөг",
+    "/":
+      "Удирдлагын талбар",
+
+    "/receivables":
+      "Авлага",
+
+    "/payables":
+      "Өглөг",
+
     "/revenue-expense":
       "Орлого / Зардал",
+
     "/cash-flow":
-      "Мөнгөн урсгал"
+      "Мөнгөн урсгал",
+
+    "/settings":
+      "Тохиргоо",
+
+    "/users":
+      "Тохиргоо"
   },
+
   en: {
-    "/": "Dashboard",
+    "/":
+      "Executive Overview",
+
     "/receivables":
       "Receivables",
+
     "/payables":
       "Payables",
+
     "/revenue-expense":
-      "Revenue / Expense",
+      "Income / Expense",
+
     "/cash-flow":
-      "Cash Flow"
+      "Cash Flow",
+
+    "/settings":
+      "Settings",
+
+    "/users":
+      "Settings"
   }
 };
 
@@ -52,11 +90,14 @@ export default function Header() {
   const {
     selectedMonth,
     setSelectedMonth,
+
     selectedBranch,
     setSelectedBranch,
+
     language,
     setLanguage
-  } = useDashboard();
+  } =
+    useDashboard();
 
   const [
     branches,
@@ -64,29 +105,40 @@ export default function Header() {
   ] = useState([]);
 
   useEffect(() => {
-    let active = true;
+    let active =
+      true;
 
     async function load() {
       try {
         const data =
           await getBranches();
 
-        if (!active) {
+        if (
+          !active
+        ) {
           return;
         }
 
         setBranches(
-          Array.isArray(data)
+          Array.isArray(
+            data
+          )
             ? data
             : []
         );
-      } catch (error) {
+      } catch (
+        error
+      ) {
         console.error(
           error
         );
 
-        if (active) {
-          setBranches([]);
+        if (
+          active
+        ) {
+          setBranches(
+            []
+          );
         }
       }
     }
@@ -94,15 +146,25 @@ export default function Header() {
     load();
 
     return () => {
-      active = false;
+      active =
+        false;
     };
   }, []);
 
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
   const currentTitle =
-    titles[language]?.[
+    titles[
+      currentLanguage
+    ]?.[
       location.pathname
     ] ||
-    titles[language]?.["/"] ||
+    titles[
+      currentLanguage
+    ]?.["/"] ||
     "Dashboard";
 
   return (
@@ -114,7 +176,8 @@ export default function Header() {
       <div className="header-actions">
         <div className="header-filter">
           <label className="header-filter-label">
-            {language === "mn"
+            {currentLanguage ===
+            "mn"
               ? "ОГНОО"
               : "DATE"}
           </label>
@@ -123,7 +186,9 @@ export default function Header() {
             <span className="header-select-icon">
               <CalendarDays
                 size={15}
-                strokeWidth={2}
+                strokeWidth={
+                  2
+                }
               />
             </span>
 
@@ -143,19 +208,23 @@ export default function Header() {
               }
             >
               <option value="all">
-                {language ===
+                {currentLanguage ===
                 "mn"
                   ? "Бүгд"
                   : "All"}
               </option>
 
               {months.map(
-                (month) => (
+                (
+                  month
+                ) => (
                   <option
                     value={
                       month
                     }
-                    key={month}
+                    key={
+                      month
+                    }
                   >
                     {month}
                   </option>
@@ -167,7 +236,8 @@ export default function Header() {
 
         <div className="header-filter header-branch-filter">
           <label className="header-filter-label">
-            {language === "mn"
+            {currentLanguage ===
+            "mn"
               ? "САЛБАР"
               : "BRANCH"}
           </label>
@@ -176,7 +246,9 @@ export default function Header() {
             <span className="header-select-icon">
               <Building2
                 size={15}
-                strokeWidth={2}
+                strokeWidth={
+                  2
+                }
               />
             </span>
 
@@ -196,14 +268,16 @@ export default function Header() {
               }
             >
               <option value="all">
-                {language ===
+                {currentLanguage ===
                 "mn"
                   ? "Бүгд"
                   : "All"}
               </option>
 
               {branches.map(
-                (branch) => (
+                (
+                  branch
+                ) => (
                   <option
                     key={
                       branch.id
@@ -227,7 +301,7 @@ export default function Header() {
             type="button"
             aria-label="English"
             className={`language-button ${
-              language ===
+              currentLanguage ===
               "en"
                 ? "selected"
                 : ""
@@ -247,7 +321,7 @@ export default function Header() {
             type="button"
             aria-label="Монгол"
             className={`language-button ${
-              language ===
+              currentLanguage ===
               "mn"
                 ? "selected"
                 : ""

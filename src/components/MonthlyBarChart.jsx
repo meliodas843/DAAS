@@ -2,12 +2,13 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from "recharts";
+
+import HoverScroll from "./HoverScroll";
 
 function formatCompact(value) {
   const number =
@@ -90,7 +91,10 @@ function formatMonth(value) {
   const text =
     String(value)
       .trim()
-      .replace(/-/g, "/");
+      .replace(
+        /-/g,
+        "/"
+      );
 
   const match =
     text.match(
@@ -103,64 +107,43 @@ function formatMonth(value) {
 
   return `${match[1]}/${String(
     match[2]
-  ).padStart(2, "0")}`;
-}
-
-function ValueLabel({
-  x = 0,
-  y = 0,
-  width = 0,
-  value
-}) {
-  const number =
-    Number(value || 0);
-
-  if (
-    !Number.isFinite(
-      number
-    ) ||
-    number === 0
-  ) {
-    return null;
-  }
-
-  return (
-    <text
-      x={
-        x +
-        width / 2
-      }
-      y={y - 7}
-      textAnchor="middle"
-      fill="#101827"
-      fontSize={10}
-      fontWeight={800}
-    >
-      {formatCompact(
-        number
-      )}
-    </text>
-  );
+  ).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 export default function MonthlyBarChart({
   data = [],
-  color = "#43d77b"
+  color = "#43d77b",
+  language = "mn",
+  valueLabel
 }) {
+  const tooltipLabel =
+    valueLabel ||
+    (
+      language === "en"
+        ? "Amount"
+        : "Дүн"
+    );
+
   const safeData =
     Array.isArray(data)
       ? data.map(
           (item) => ({
             ...item,
+
             month:
               formatMonth(
                 item.month ||
                   item.name ||
                   ""
               ),
+
             value:
               Number(
-                item.value || 0
+                item.value ||
+                  0
               )
           })
         )
@@ -170,7 +153,8 @@ export default function MonthlyBarChart({
     safeData.map(
       (item) =>
         Number(
-          item.value || 0
+          item.value ||
+            0
         )
     );
 
@@ -182,126 +166,173 @@ export default function MonthlyBarChart({
 
   const calculatedMax =
     maxValue > 0
-      ? maxValue * 1.15
+      ? maxValue *
+        1.15
       : 1;
+
+  const chartWidth =
+    Math.max(
+      720,
+      safeData.length *
+        105
+    );
 
   return (
     <div className="monthly-bar-chart">
-      <div className="monthly-bar-chart-main">
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
+      <HoverScroll
+        direction="horizontal"
+        className="monthly-bar-hover-scroll"
+      >
+        <div
+          className="monthly-bar-chart-main"
+          style={{
+            width:
+              `${chartWidth}px`
+          }}
         >
-          <BarChart
-            data={safeData}
-            margin={{
-              top: 26,
-              right: 18,
-              bottom: 10,
-              left: 8
-            }}
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="#edf1f7"
-            />
-
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              height={28}
-              tickMargin={7}
-              tick={{
-                fill:
-                  "#8292aa",
-                fontSize: 10,
-                fontWeight: 500
-              }}
-              tickFormatter={(
-                value
-              ) => {
-                const month =
-                  String(
-                    value
-                  ).split(
-                    "/"
-                  )[1];
-
-                return (
-                  month ||
-                  value
-                );
-              }}
-            />
-
-            <YAxis
-              type="number"
-              domain={[
-                0,
-                calculatedMax
-              ]}
-              axisLine={false}
-              tickLine={false}
-              width={62}
-              tick={{
-                fill:
-                  "#8292aa",
-                fontSize: 10
-              }}
-              tickFormatter={
-                formatCompact
+            <BarChart
+              data={
+                safeData
               }
-            />
-
-            <Tooltip
-              cursor={{
-                fill:
-                  "rgba(15, 23, 42, 0.025)"
+              margin={{
+                top: 26,
+                right: 18,
+                bottom: 10,
+                left: 8
               }}
-              formatter={(
-                value
-              ) => [
-                formatTooltip(
-                  value
-                ),
-                "Дүн"
-              ]}
-              labelFormatter={(
-                value
-              ) =>
-                formatMonth(
-                  value
-                )
-              }
-            />
-
-            <Bar
-              dataKey="value"
-              fill={color}
-              barSize={38}
-              radius={[
-                5,
-                5,
-                0,
-                0
-              ]}
-              isAnimationActive={
-                false
-              }
+              barCategoryGap="35%"
             >
-              <LabelList
-                dataKey="value"
-                content={
-                  <ValueLabel />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={
+                  false
+                }
+                stroke="#edf1f7"
+              />
+
+              <XAxis
+                dataKey="month"
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                interval={
+                  0
+                }
+                height={
+                  28
+                }
+                tickMargin={
+                  7
+                }
+                tick={{
+                  fill:
+                    "#8292aa",
+                  fontSize:
+                    10,
+                  fontWeight:
+                    500
+                }}
+                tickFormatter={(
+                  value
+                ) => {
+                  const month =
+                    String(
+                      value
+                    ).split(
+                      "/"
+                    )[1];
+
+                  return (
+                    month ||
+                    value
+                  );
+                }}
+              />
+
+              <YAxis
+                type="number"
+                domain={[
+                  0,
+                  calculatedMax
+                ]}
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                width={
+                  62
+                }
+                tick={{
+                  fill:
+                    "#8292aa",
+                  fontSize:
+                    10
+                }}
+                tickFormatter={
+                  formatCompact
                 }
               />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+
+              <Tooltip
+                cursor={{
+                  fill:
+                    "rgba(15, 23, 42, 0.025)"
+                }}
+                formatter={(
+                  value
+                ) => [
+                  formatTooltip(
+                    value
+                  ),
+                  tooltipLabel
+                ]}
+                labelFormatter={(
+                  value
+                ) =>
+                  formatMonth(
+                    value
+                  )
+                }
+              />
+
+              <Bar
+                dataKey="value"
+                fill={
+                  color
+                }
+                barSize={
+                  24
+                }
+                radius={[
+                  4,
+                  4,
+                  0,
+                  0
+                ]}
+                isAnimationActive={
+                  true
+                }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
+                animationEasing="ease-out"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </HoverScroll>
     </div>
   );
 }

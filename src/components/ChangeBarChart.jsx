@@ -8,6 +8,8 @@ import {
   YAxis
 } from "recharts";
 
+import HoverScroll from "./HoverScroll";
+
 function formatCompact(value) {
   const number =
     Number(value || 0);
@@ -92,11 +94,14 @@ function CustomBarShape(props) {
 
   const value =
     Number(
-      payload?.value || 0
+      payload?.value ||
+        0
     );
 
   if (
-    !Number.isFinite(value) ||
+    !Number.isFinite(
+      value
+    ) ||
     value === 0
   ) {
     return null;
@@ -114,24 +119,25 @@ function CustomBarShape(props) {
     y +
     height / 2;
 
-  const label =
-    formatCompact(
-      value
-    );
-
   return (
     <g>
       <rect
         x={x}
         y={y}
         width={Math.max(
-          width,
+          Math.abs(
+            width
+          ),
           2
         )}
-        height={height}
+        height={
+          height
+        }
         rx={5}
         ry={5}
-        fill={fill}
+        fill={
+          fill
+        }
       />
 
       <text
@@ -142,7 +148,9 @@ function CustomBarShape(props) {
               width +
               9
         }
-        y={centerY}
+        y={
+          centerY
+        }
         dominantBaseline="middle"
         textAnchor={
           negative
@@ -154,10 +162,16 @@ function CustomBarShape(props) {
             ? "#dc2626"
             : "#101827"
         }
-        fontSize={10.5}
-        fontWeight={800}
+        fontSize={
+          10.5
+        }
+        fontWeight={
+          800
+        }
       >
-        {label}
+        {formatCompact(
+          value
+        )}
       </text>
     </g>
   );
@@ -178,8 +192,18 @@ const AXIS_TICKS = [
 ];
 
 export default function ChangeBarChart({
-  data = []
+  data = [],
+  language = "mn",
+  valueLabel
 }) {
+  const tooltipLabel =
+    valueLabel ||
+    (
+      language === "en"
+        ? "Change"
+        : "Өөрчлөлт"
+    );
+
   const safeData =
     Array.isArray(data)
       ? data.map(
@@ -187,7 +211,8 @@ export default function ChangeBarChart({
             ...item,
             value:
               Number(
-                item.value || 0
+                item.value ||
+                  0
               )
           })
         )
@@ -202,86 +227,134 @@ export default function ChangeBarChart({
   const chartRightMargin =
     75;
 
+  const visibleHeight =
+    285;
+
+  const rowHeight =
+    56;
+
+  const chartHeight =
+    Math.max(
+      visibleHeight +
+        1,
+      safeData.length *
+        rowHeight +
+        12
+    );
+
   return (
     <div className="change-bar-chart">
-      <div className="change-bar-chart-main">
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
+      <HoverScroll
+        direction="vertical"
+        className="change-bar-hover-scroll"
+      >
+        <div
+          className="change-bar-chart-main"
+          style={{
+            height:
+              `${chartHeight}px`
+          }}
         >
-          <BarChart
-            data={safeData}
-            layout="vertical"
-            margin={{
-              top: 5,
-              right:
-                chartRightMargin,
-              bottom: 0,
-              left:
-                chartLeftMargin
-            }}
-            barCategoryGap={16}
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              horizontal={false}
-              stroke="#edf1f7"
-            />
-
-            <XAxis
-              type="number"
-              domain={[
-                AXIS_MIN,
-                AXIS_MAX
-              ]}
-              hide
-              allowDataOverflow
-            />
-
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={
-                yAxisWidth
+            <BarChart
+              data={
+                safeData
               }
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              tick={{
-                fill:
-                  "#536177",
-                fontSize: 10
+              layout="vertical"
+              margin={{
+                top: 5,
+                right:
+                  chartRightMargin,
+                bottom: 0,
+                left:
+                  chartLeftMargin
               }}
-            />
+              barCategoryGap={
+                16
+              }
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={
+                  false
+                }
+                stroke="#edf1f7"
+              />
 
-            <Tooltip
-              cursor={{
-                fill:
-                  "rgba(15, 23, 42, 0.025)"
-              }}
-              formatter={(
-                value
-              ) => [
-                formatTooltip(
+              <XAxis
+                type="number"
+                domain={[
+                  AXIS_MIN,
+                  AXIS_MAX
+                ]}
+                hide
+                allowDataOverflow
+              />
+
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={
+                  yAxisWidth
+                }
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                interval={
+                  0
+                }
+                tick={{
+                  fill:
+                    "#536177",
+                  fontSize:
+                    10
+                }}
+              />
+
+              <Tooltip
+                cursor={{
+                  fill:
+                    "rgba(15, 23, 42, 0.025)"
+                }}
+                formatter={(
                   value
-                ),
-                "Өөрчлөлт"
-              ]}
-            />
+                ) => [
+                  formatTooltip(
+                    value
+                  ),
+                  tooltipLabel
+                ]}
+              />
 
-            <Bar
-              dataKey="value"
-              barSize={22}
-              shape={
-                <CustomBarShape />
-              }
-              isAnimationActive={
-                false
-              }
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+              <Bar
+                dataKey="value"
+                barSize={
+                  22
+                }
+                shape={
+                  <CustomBarShape />
+                }
+                isAnimationActive={
+                  true
+                }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
+                animationEasing="ease-out"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </HoverScroll>
 
       <div className="shared-bottom-axis">
         <div
@@ -297,25 +370,31 @@ export default function ChangeBarChart({
           }}
         >
           {AXIS_TICKS.map(
-            (tick) => (
-              <span
-                key={tick}
-                className="shared-bottom-axis-tick"
-                style={{
-                  left: `${
-                    ((tick -
-                      AXIS_MIN) /
-                      (AXIS_MAX -
-                        AXIS_MIN)) *
-                    100
-                  }%`
-                }}
-              >
-                {formatCompact(
-                  tick
-                )}
-              </span>
-            )
+            (tick) => {
+              const position =
+                ((tick -
+                  AXIS_MIN) /
+                  (AXIS_MAX -
+                    AXIS_MIN)) *
+                100;
+
+              return (
+                <span
+                  key={
+                    tick
+                  }
+                  className="shared-bottom-axis-tick"
+                  style={{
+                    left:
+                      `${position}%`
+                  }}
+                >
+                  {formatCompact(
+                    tick
+                  )}
+                </span>
+              );
+            }
           )}
         </div>
       </div>

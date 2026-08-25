@@ -8,13 +8,50 @@ import {
   formatMoney
 } from "../utils/formatters";
 
-function formatDifference(value) {
-  const number = Number(value || 0);
-  const absolute = Math.abs(number);
+const translations = {
+  mn: {
+    previousMonth:
+      "өмнөх сар",
+    increased:
+      "өссөн",
+    decreased:
+      "буурсан",
+    unchanged:
+      "Өөрчлөлтгүй",
+    target:
+      "Зорилт"
+  },
 
-  if (absolute >= 1_000_000_000) {
+  en: {
+    previousMonth:
+      "previous month",
+    increased:
+      "increased",
+    decreased:
+      "decreased",
+    unchanged:
+      "No change",
+    target:
+      "Target"
+  }
+};
+
+function formatDifference(
+  value
+) {
+  const number =
+    Number(value || 0);
+
+  const absolute =
+    Math.abs(number);
+
+  if (
+    absolute >=
+    1_000_000_000
+  ) {
     const result =
-      absolute / 1_000_000_000;
+      absolute /
+      1_000_000_000;
 
     return `₮${
       result >= 10
@@ -23,9 +60,13 @@ function formatDifference(value) {
     }bn`;
   }
 
-  if (absolute >= 1_000_000) {
+  if (
+    absolute >=
+    1_000_000
+  ) {
     const result =
-      absolute / 1_000_000;
+      absolute /
+      1_000_000;
 
     return `₮${
       result >= 10
@@ -34,9 +75,13 @@ function formatDifference(value) {
     }M`;
   }
 
-  if (absolute >= 1_000) {
+  if (
+    absolute >=
+    1_000
+  ) {
     const result =
-      absolute / 1_000;
+      absolute /
+      1_000;
 
     return `₮${
       result >= 10
@@ -47,7 +92,9 @@ function formatDifference(value) {
 
   return `₮${Math.round(
     absolute
-  ).toLocaleString("en-US")}`;
+  ).toLocaleString(
+    "en-US"
+  )}`;
 }
 
 function getCalculatedChange(
@@ -61,24 +108,32 @@ function getCalculatedChange(
     Number(previous);
 
   if (
-    !Number.isFinite(currentNumber) ||
-    !Number.isFinite(previousNumber)
+    !Number.isFinite(
+      currentNumber
+    ) ||
+    !Number.isFinite(
+      previousNumber
+    )
   ) {
     return 0;
   }
 
-  if (previousNumber === 0) {
+  if (
+    previousNumber === 0
+  ) {
     return 0;
   }
 
   return (
-    ((currentNumber -
-      previousNumber) /
-      Math.abs(
-        previousNumber
-      )) *
-    100
-  );
+    (
+      currentNumber -
+      previousNumber
+    ) /
+    Math.abs(
+      previousNumber
+    )
+  ) *
+    100;
 }
 
 function normalizeChange(
@@ -90,8 +145,12 @@ function normalizeChange(
     Number(change);
 
   if (
-    Number.isFinite(backendChange) &&
-    Math.abs(backendChange) <= 1000
+    Number.isFinite(
+      backendChange
+    ) &&
+    Math.abs(
+      backendChange
+    ) <= 1000
   ) {
     return backendChange;
   }
@@ -102,12 +161,16 @@ function normalizeChange(
   );
 }
 
-function formatChangePercent(value) {
+function formatChangePercent(
+  value
+) {
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
     return "0.0%";
   }
@@ -124,13 +187,27 @@ export default function KpiCard({
   change = null,
   warning = false,
   icon = null,
-  target = null
+  target = null,
+  inverse = false,
+  language = "mn"
 }) {
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
+
   const currentNumber =
     Number(value);
 
   const previousNumber =
-    Number(previousValue);
+    Number(
+      previousValue
+    );
 
   const safeCurrent =
     Number.isFinite(
@@ -159,12 +236,22 @@ export default function KpiCard({
   const unchanged =
     difference === 0;
 
-  const movementClass =
-    unchanged
-      ? "neutral"
-      : increased
-        ? "positive"
-        : "negative";
+  let movementClass =
+    "neutral";
+
+  if (!unchanged) {
+    if (inverse) {
+      movementClass =
+        increased
+          ? "negative"
+          : "positive";
+    } else {
+      movementClass =
+        increased
+          ? "positive"
+          : "negative";
+    }
+  }
 
   const safeChange =
     normalizeChange(
@@ -188,8 +275,10 @@ export default function KpiCard({
     hasTarget
       ? Math.min(
           Math.max(
-            (safeCurrent /
-              targetNumber) *
+            (
+              safeCurrent /
+              targetNumber
+            ) *
               100,
             0
           ),
@@ -198,7 +287,8 @@ export default function KpiCard({
       : 0;
 
   const Icon =
-    icon || TrendingUp;
+    icon ||
+    TrendingUp;
 
   return (
     <div
@@ -268,8 +358,9 @@ export default function KpiCard({
           {formatMoney(
             safePrevious,
             true
-          )}{" "}
-          өмнөх сар
+          )}
+          {" "}
+          {t.previousMonth}
         </div>
       </div>
 
@@ -285,8 +376,10 @@ export default function KpiCard({
             d={
               decreased
                 ? "M2 8 C12 9 18 14 27 13 C38 11 45 19 54 18 C64 17 70 24 80 23 C88 23 94 29 98 30 L98 38 L2 38 Z"
+
                 : unchanged
                   ? "M2 20 C17 20 32 20 49 20 C66 20 82 20 98 20 L98 38 L2 38 Z"
+
                   : "M2 28 C13 25 19 23 28 27 C39 31 45 20 55 21 C66 23 72 14 82 15 C89 15 94 10 98 7 L98 38 L2 38 Z"
             }
           />
@@ -296,8 +389,10 @@ export default function KpiCard({
             d={
               decreased
                 ? "M2 8 C12 9 18 14 27 13 C38 11 45 19 54 18 C64 17 70 24 80 23 C88 23 94 29 98 30"
+
                 : unchanged
                   ? "M2 20 C17 20 32 20 49 20 C66 20 82 20 98 20"
+
                   : "M2 28 C13 25 19 23 28 27 C39 31 45 20 55 21 C66 23 72 14 82 15 C89 15 94 10 98 7"
             }
           />
@@ -308,18 +403,21 @@ export default function KpiCard({
         className={`kpi-difference ${movementClass}`}
       >
         {unchanged ? (
-          "Өөрчлөлтгүй"
+          t.unchanged
         ) : (
           <>
             {increased
               ? "+"
               : "-"}
+
             {formatDifference(
               difference
-            )}{" "}
+            )}
+            {" "}
+
             {increased
-              ? "өссөн"
-              : "буурсан"}
+              ? t.increased
+              : t.decreased}
           </>
         )}
       </div>
@@ -328,7 +426,7 @@ export default function KpiCard({
         <div className="kpi-progress-section">
           <div className="kpi-progress-header">
             <span>
-              Зорилт
+              {t.target}
             </span>
 
             <strong>
@@ -343,7 +441,8 @@ export default function KpiCard({
             <div
               className="kpi-progress-bar"
               style={{
-                width: `${progress}%`
+                width:
+                  `${progress}%`
               }}
             />
           </div>

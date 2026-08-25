@@ -20,11 +20,74 @@ import {
   getMonthlyFilters
 } from "../utils/filters";
 
+const translations = {
+  mn: {
+    loading:
+      "Уншиж байна...",
+    loadError:
+      "Өгөгдөл ачаалахад алдаа гарлаа",
+
+    byBranch:
+      "Авлагын дүн салбараар",
+
+    monthlyChange:
+      "Сарын Авлагын Өөрчлөлт",
+
+    byMonth:
+      "Авлагын дүн сараар",
+
+    byAccount:
+      "Авлагын дүн дансаар",
+
+    amount:
+      "Дүн",
+
+    change:
+      "Өөрчлөлт"
+  },
+
+  en: {
+    loading:
+      "Loading...",
+    loadError:
+      "Data load failed",
+
+    byBranch:
+      "Receivables Amount by Branch",
+
+    monthlyChange:
+      "Monthly Receivables Change",
+
+    byMonth:
+      "Receivables Amount by Month",
+
+    byAccount:
+      "Receivables Amount by Account",
+
+    amount:
+      "Amount",
+
+    change:
+      "Change"
+  }
+};
+
 export default function Receivables() {
   const {
     selectedMonth,
-    selectedBranch
+    selectedBranch,
+    language
   } = useDashboard();
+
+  const currentLanguage =
+    language === "en"
+      ? "en"
+      : "mn";
+
+  const t =
+    translations[
+      currentLanguage
+    ];
 
   const [
     branches,
@@ -57,11 +120,15 @@ export default function Receivables() {
   ] = useState("");
 
   useEffect(() => {
-    let active = true;
+    let active =
+      true;
 
     async function load() {
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
+
         setError("");
 
         const filters =
@@ -85,12 +152,15 @@ export default function Receivables() {
             getReceivableBranches(
               filters
             ),
+
             getReceivableChanges(
               monthlyFilters
             ),
+
             getReceivableMonthly(
               monthlyFilters
             ),
+
             getReceivableAccounts(
               filters
             )
@@ -135,12 +205,14 @@ export default function Receivables() {
         if (active) {
           setError(
             err?.message ||
-              "Data load failed"
+              t.loadError
           );
         }
       } finally {
         if (active) {
-          setLoading(false);
+          setLoading(
+            false
+          );
         }
       }
     }
@@ -148,17 +220,19 @@ export default function Receivables() {
     load();
 
     return () => {
-      active = false;
+      active =
+        false;
     };
   }, [
     selectedMonth,
-    selectedBranch
+    selectedBranch,
+    t.loadError
   ]);
 
   if (loading) {
     return (
       <div className="page-loading">
-        Loading...
+        {t.loading}
       </div>
     );
   }
@@ -173,39 +247,101 @@ export default function Receivables() {
 
   return (
     <div className="page-grid page-grid-2">
-      <Card title="Авлагын дүн салбараар">
+      <Card
+        title={
+          t.byBranch
+        }
+      >
         <HorizontalBarChart
-          data={branches}
-          yAxisWidth={195}
-          visibleHeight={285}
-          rowHeight={40}
-          barSize={20}
-        />
-      </Card>
-
-      <Card title="Сарын Авлагын Өөрчлөлт">
-        <ChangeBarChart
-          data={changes}
+          data={
+            branches
+          }
+          yAxisWidth={
+            195
+          }
+          visibleHeight={
+            285
+          }
+          rowHeight={
+            52
+          }
+          barSize={
+            20
+          }
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
         />
       </Card>
 
       <Card
-        title="Авлагын дүн сараар"
-        className="monthly-card"
+        title={
+          t.monthlyChange
+        }
       >
-        <MonthlyBarChart
-          data={monthly}
-          color="#43d77b"
+        <ChangeBarChart
+          data={
+            changes
+          }
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.change
+          }
         />
       </Card>
 
-      <Card title="Авлагын дүн дансаар">
+      <Card
+        title={
+          t.byMonth
+        }
+        className="monthly-card"
+      >
+        <MonthlyBarChart
+          data={
+            monthly
+          }
+          color="#43d77b"
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
+        />
+      </Card>
+
+      <Card
+        title={
+          t.byAccount
+        }
+      >
         <HorizontalBarChart
-          data={accounts}
-          yAxisWidth={210}
-          visibleHeight={285}
-          rowHeight={40}
-          barSize={20}
+          data={
+            accounts
+          }
+          yAxisWidth={
+            210
+          }
+          visibleHeight={
+            285
+          }
+          rowHeight={
+            52
+          }
+          barSize={
+            20
+          }
+          language={
+            currentLanguage
+          }
+          valueLabel={
+            t.amount
+          }
         />
       </Card>
     </div>
