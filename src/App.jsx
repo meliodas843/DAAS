@@ -17,6 +17,7 @@ import Payables from "./pages/Payables";
 import RevenueExpense from "./pages/RevenueExpense";
 import CashFlow from "./pages/CashFlow";
 import Users from "./pages/Users";
+import Help from "./pages/Help";
 
 export default function App() {
   return (
@@ -79,6 +80,13 @@ export default function App() {
             path="/cash-flow"
             element={
               <CashFlow />
+            }
+          />
+
+          <Route
+            path="/help"
+            element={
+              <Help />
             }
           />
 

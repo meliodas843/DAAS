@@ -6,6 +6,12 @@ import {
   Tooltip
 } from "recharts";
 
+import ExcelDownloadButton from "./ExcelDownloadButton";
+
+import {
+  exportChartToExcel
+} from "../utils/exportExcel";
+
 function formatCompact(value) {
   const number =
     Number(value || 0);
@@ -27,7 +33,9 @@ function formatCompact(value) {
       1_000_000_000;
 
     return `${sign}${
-      Number.isInteger(result)
+      Number.isInteger(
+        result
+      )
         ? result.toFixed(0)
         : result.toFixed(1)
     }bn`;
@@ -42,7 +50,9 @@ function formatCompact(value) {
       1_000_000;
 
     return `${sign}${
-      Number.isInteger(result)
+      Number.isInteger(
+        result
+      )
         ? result.toFixed(0)
         : result.toFixed(1)
     }M`;
@@ -57,7 +67,9 @@ function formatCompact(value) {
       1_000;
 
     return `${sign}${
-      Number.isInteger(result)
+      Number.isInteger(
+        result
+      )
         ? result.toFixed(0)
         : result.toFixed(1)
     }K`;
@@ -106,10 +118,12 @@ function PercentageLabel({
   }
 
   const RADIAN =
-    Math.PI / 180;
+    Math.PI /
+    180;
 
   const radius =
-    outerRadius + 24;
+    outerRadius +
+    24;
 
   const x =
     cx +
@@ -142,22 +156,32 @@ function PercentageLabel({
       fontWeight={800}
     >
       {`${(
-        percent * 100
-      ).toFixed(1)}%`}
+        percent *
+        100
+      ).toFixed(
+        1
+      )}%`}
     </text>
   );
 }
 
 export default function AgingDonut({
   data = [],
-  previous = ""
+  previous = "",
+  title = "Aging Report",
+  language = "mn"
 }) {
   const safeData =
-    Array.isArray(data)
+    Array.isArray(
+      data
+    )
       ? data
           .map(
-            (item) => ({
+            (
+              item
+            ) => ({
               ...item,
+
               value:
                 Number(
                   item.value ||
@@ -166,10 +190,13 @@ export default function AgingDonut({
             })
           )
           .filter(
-            (item) =>
+            (
+              item
+            ) =>
               Number(
                 item.value
-              ) > 0
+              ) >
+              0
           )
       : [];
 
@@ -182,8 +209,45 @@ export default function AgingDonut({
       4
     );
 
+  const downloadTitle =
+    language === "en"
+      ? "Download Excel"
+      : "Excel татах";
+
   return (
     <div className="aging-donut">
+      <div className="aging-donut-download">
+        <ExcelDownloadButton
+          title={
+            downloadTitle
+          }
+          onClick={() =>
+            exportChartToExcel({
+              data:
+                safeData,
+
+              fileName:
+                title,
+
+              sheetName:
+                "Aging",
+
+              nameHeader:
+                language ===
+                "en"
+                  ? "Aging"
+                  : "Ангилал",
+
+              valueHeader:
+                language ===
+                "en"
+                  ? "Amount"
+                  : "Дүн"
+            })
+          }
+        />
+      </div>
+
       <div className="aging-donut-chart-section">
         <div className="aging-donut-chart">
           <ResponsiveContainer
@@ -199,20 +263,32 @@ export default function AgingDonut({
               }}
             >
               <Pie
-                data={safeData}
+                data={
+                  safeData
+                }
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                innerRadius={62}
-                outerRadius={88}
-                paddingAngle={1}
+                innerRadius={
+                  62
+                }
+                outerRadius={
+                  88
+                }
+                paddingAngle={
+                  1
+                }
                 stroke="#ffffff"
-                strokeWidth={2}
+                strokeWidth={
+                  2
+                }
                 labelLine={{
                   stroke:
                     "#cbd5e1",
-                  strokeWidth: 1
+
+                  strokeWidth:
+                    1
                 }}
                 label={
                   <PercentageLabel />
@@ -220,7 +296,9 @@ export default function AgingDonut({
                 isAnimationActive={
                   true
                 }
-                animationBegin={100}
+                animationBegin={
+                  100
+                }
                 animationDuration={
                   1100
                 }
@@ -294,7 +372,9 @@ export default function AgingDonut({
                     />
 
                     <span className="aging-legend-name">
-                      {item.name}
+                      {
+                        item.name
+                      }
                     </span>
                   </div>
 

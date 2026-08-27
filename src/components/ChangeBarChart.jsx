@@ -115,21 +115,36 @@ function CustomBarShape(props) {
       ? "#e1262c"
       : "#2966e8";
 
+  const actualWidth =
+    Math.max(
+      Math.abs(width),
+      2
+    );
+
+  const rectX =
+    negative
+      ? x + width
+      : x;
+
   const centerY =
     y +
     height / 2;
 
+  const labelX =
+    negative
+      ? rectX - 9
+      : rectX +
+        actualWidth +
+        9;
+
   return (
     <g>
       <rect
-        x={x}
+        x={rectX}
         y={y}
-        width={Math.max(
-          Math.abs(
-            width
-          ),
-          2
-        )}
+        width={
+          actualWidth
+        }
         height={
           height
         }
@@ -142,11 +157,7 @@ function CustomBarShape(props) {
 
       <text
         x={
-          negative
-            ? x - 9
-            : x +
-              width +
-              9
+          labelX
         }
         y={
           centerY
@@ -177,19 +188,87 @@ function CustomBarShape(props) {
   );
 }
 
-const AXIS_MIN =
-  -2_000_000_000;
+function calculateAxis(
+  data
+) {
+  const values =
+    data.map(
+      (item) =>
+        Number(
+          item.value ||
+            0
+        )
+    );
 
-const AXIS_MAX =
-  2_000_000_000;
+  const minValue =
+    Math.min(
+      ...values,
+      0
+    );
 
-const AXIS_TICKS = [
-  -2_000_000_000,
-  -1_000_000_000,
-  0,
-  1_000_000_000,
-  2_000_000_000
-];
+  const maxValue =
+    Math.max(
+      ...values,
+      0
+    );
+
+  const maxAbsolute =
+    Math.max(
+      Math.abs(
+        minValue
+      ),
+      Math.abs(
+        maxValue
+      ),
+      1
+    );
+
+  let step =
+    500_000_000;
+
+  if (
+    maxAbsolute >
+    2_000_000_000
+  ) {
+    step =
+      1_000_000_000;
+  }
+
+  const edge =
+    Math.ceil(
+      maxAbsolute /
+        step
+    ) *
+    step;
+
+  return {
+    min:
+      -edge,
+    max:
+      edge,
+    step
+  };
+}
+
+function createTicks(
+  min,
+  max,
+  step
+) {
+  const ticks = [];
+
+  for (
+    let value = min;
+    value <= max;
+    value += step
+  ) {
+    ticks.push(
+      value
+    );
+  }
+
+  return ticks;
+}
 
 export default function ChangeBarChart({
   data = [],
@@ -209,6 +288,7 @@ export default function ChangeBarChart({
       ? data.map(
           (item) => ({
             ...item,
+
             value:
               Number(
                 item.value ||
@@ -217,6 +297,22 @@ export default function ChangeBarChart({
           })
         )
       : [];
+
+  const {
+    min: axisMin,
+    max: axisMax,
+    step: axisStep
+  } =
+    calculateAxis(
+      safeData
+    );
+
+  const axisTicks =
+    createTicks(
+      axisMin,
+      axisMax,
+      axisStep
+    );
 
   const yAxisWidth =
     90;
@@ -235,8 +331,7 @@ export default function ChangeBarChart({
 
   const chartHeight =
     Math.max(
-      visibleHeight +
-        1,
+      visibleHeight + 1,
       safeData.length *
         rowHeight +
         12
@@ -266,9 +361,12 @@ export default function ChangeBarChart({
               layout="vertical"
               margin={{
                 top: 5,
+
                 right:
                   chartRightMargin,
+
                 bottom: 0,
+
                 left:
                   chartLeftMargin
               }}
@@ -287,8 +385,8 @@ export default function ChangeBarChart({
               <XAxis
                 type="number"
                 domain={[
-                  AXIS_MIN,
-                  AXIS_MAX
+                  axisMin,
+                  axisMax
                 ]}
                 hide
                 allowDataOverflow
@@ -312,6 +410,7 @@ export default function ChangeBarChart({
                 tick={{
                   fill:
                     "#536177",
+
                   fontSize:
                     10
                 }}
@@ -328,6 +427,7 @@ export default function ChangeBarChart({
                   formatTooltip(
                     value
                   ),
+
                   tooltipLabel
                 ]}
               />
@@ -365,17 +465,24 @@ export default function ChangeBarChart({
                 yAxisWidth +
                 chartLeftMargin
               }px`,
+
             marginRight:
               `${chartRightMargin}px`
           }}
         >
-          {AXIS_TICKS.map(
+          {axisTicks.map(
             (tick) => {
               const position =
-                ((tick -
-                  AXIS_MIN) /
-                  (AXIS_MAX -
-                    AXIS_MIN)) *
+                (
+                  (
+                    tick -
+                    axisMin
+                  ) /
+                  (
+                    axisMax -
+                    axisMin
+                  )
+                ) *
                 100;
 
               return (

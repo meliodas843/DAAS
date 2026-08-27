@@ -7,7 +7,8 @@ import {
 
 import {
   Eye,
-  EyeOff
+  EyeOff,
+  X
 } from "lucide-react";
 
 import {
@@ -24,346 +25,16 @@ const API =
 
 const MAX_ADMINS = 2;
 
-const translations = {
-  mn: {
-    pageTitle:
-      "Хэрэглэгчид",
-
-    pageSubtitle:
-      "Хэрэглэгч нэмэх болон эрх тохируулах",
-
-    totalUsers:
-      "Нийт хэрэглэгч",
-
-    newUser:
-      "Шинэ хэрэглэгч",
-
-    newUserDescription:
-      "Хэрэглэгчид түр нууц үг өгнө. Эхний нэвтрэлтээр шинэ нууц үг үүсгэнэ.",
-
-    unblockTitle:
-      "Хэрэглэгчийн блок гаргах",
-
-    unblockDescription:
-      "Хэрэглэгчид шинэ нууц үг үүсгээд блок гаргана.",
-
-    email:
-      "И-мэйл",
-
-    temporaryPassword:
-      "Түр нууц үг",
-
-    newPassword:
-      "Шинэ нууц үг",
-
-    passwordPlaceholder:
-      "Хамгийн багадаа 10 тэмдэгт",
-
-    role:
-      "Эрх",
-
-    viewer:
-      "Viewer",
-
-    admin:
-      "Admin",
-
-    add:
-      "Нэмэх",
-
-    adding:
-      "Нэмж байна...",
-
-    adminCount:
-      "Админ",
-
-    usersList:
-      "Хэрэглэгчдийн жагсаалт",
-
-    usersListDescription:
-      "Admin болон Viewer эрхтэй хэрэглэгчид",
-
-    user:
-      "ХЭРЭГЛЭГЧ",
-
-    roleHeader:
-      "ЭРХ",
-
-    password:
-      "НУУЦ ҮГ",
-
-    status:
-      "ТӨЛӨВ",
-
-    login:
-      "LOGIN",
-
-    created:
-      "ҮҮСГЭСЭН",
-
-    action:
-      "ҮЙЛДЭЛ",
-
-    you:
-      "Та",
-
-    updated:
-      "Шинэчилсэн",
-
-    needsUpdate:
-      "Шинэчлэх шаардлагатай",
-
-    active:
-      "Идэвхтэй",
-
-    inactive:
-      "Идэвхгүй",
-
-    normal:
-      "Хэвийн",
-
-    unblock:
-      "Блок гаргах",
-
-    unblocking:
-      "Блок гаргаж байна...",
-
-    cancel:
-      "Цуцлах",
-
-    unblockSubmit:
-      "Нууц үг үүсгээд блок гаргах",
-
-    delete:
-      "Устгах",
-
-    deleting:
-      "Устгаж байна...",
-
-    loading:
-      "Уншиж байна...",
-
-    noUsers:
-      "Хэрэглэгч байхгүй байна",
-
-    userAdded:
-      "Хэрэглэгч амжилттай нэмэгдлээ",
-
-    userUpdated:
-      "Хэрэглэгчийн мэдээлэл шинэчлэгдлээ",
-
-    userDeleted:
-      "Хэрэглэгч бүрэн устгагдлаа",
-
-    userUnblocked:
-      "Хэрэглэгчийн блок амжилттай гарлаа",
-
-    loadError:
-      "Хэрэглэгчдийн мэдээлэл татахад алдаа гарлаа",
-
-    createError:
-      "Хэрэглэгч нэмэхэд алдаа гарлаа",
-
-    updateError:
-      "Хэрэглэгч шинэчлэхэд алдаа гарлаа",
-
-    deleteError:
-      "Хэрэглэгч устгахад алдаа гарлаа",
-
-    unblockError:
-      "Блок гаргахад алдаа гарлаа",
-
-    passwordRequirement:
-      "10+ тэмдэгт, том/жижиг үсэг, тоо, тусгай тэмдэг",
-
-    adminLimit:
-      "Админ хэрэглэгчийн тоо ихдээ 2 байна",
-
-    deleteQuestion:
-      "хэрэглэгчийг бүрэн устгах уу?"
-  },
-
-  en: {
-    pageTitle:
-      "Users",
-
-    pageSubtitle:
-      "Add users and configure permissions",
-
-    totalUsers:
-      "Total users",
-
-    newUser:
-      "New user",
-
-    newUserDescription:
-      "Users will be given a temporary password. They will create a new password on first login.",
-
-    unblockTitle:
-      "Unblock user",
-
-    unblockDescription:
-      "Create a new password for the user and unblock the account.",
-
-    email:
-      "Email",
-
-    temporaryPassword:
-      "Temporary password",
-
-    newPassword:
-      "New password",
-
-    passwordPlaceholder:
-      "At least 10 characters",
-
-    role:
-      "Role",
-
-    viewer:
-      "Viewer",
-
-    admin:
-      "Admin",
-
-    add:
-      "Add",
-
-    adding:
-      "Adding...",
-
-    adminCount:
-      "Admin",
-
-    usersList:
-      "Users list",
-
-    usersListDescription:
-      "Users with Admin and Viewer roles",
-
-    user:
-      "USER",
-
-    roleHeader:
-      "ROLE",
-
-    password:
-      "PASSWORD",
-
-    status:
-      "STATUS",
-
-    login:
-      "LOGIN",
-
-    created:
-      "CREATED",
-
-    action:
-      "ACTION",
-
-    you:
-      "You",
-
-    updated:
-      "Updated",
-
-    needsUpdate:
-      "Needs to be updated",
-
-    active:
-      "Active",
-
-    inactive:
-      "Inactive",
-
-    normal:
-      "Normal",
-
-    unblock:
-      "Unblock",
-
-    unblocking:
-      "Unblocking...",
-
-    cancel:
-      "Cancel",
-
-    unblockSubmit:
-      "Create password and unblock",
-
-    delete:
-      "Delete",
-
-    deleting:
-      "Deleting...",
-
-    loading:
-      "Loading...",
-
-    noUsers:
-      "No users found",
-
-    userAdded:
-      "User added successfully",
-
-    userUpdated:
-      "User updated successfully",
-
-    userDeleted:
-      "User permanently deleted",
-
-    userUnblocked:
-      "User unblocked successfully",
-
-    loadError:
-      "Failed to load users",
-
-    createError:
-      "Failed to add user",
-
-    updateError:
-      "Failed to update user",
-
-    deleteError:
-      "Failed to delete user",
-
-    unblockError:
-      "Failed to unblock user",
-
-    passwordRequirement:
-      "10+ characters, uppercase, lowercase, number and special character",
-
-    adminLimit:
-      "A maximum of 2 Admin users is allowed",
-
-    deleteQuestion:
-      "Are you sure you want to permanently delete this user?"
-  }
-};
-
-function isStrongPassword(
-  password
-) {
+function isStrongPassword(password) {
   const value =
-    String(
-      password || ""
-    );
+    String(password || "");
 
   return (
     value.length >= 10 &&
-    /[A-Z]/.test(
-      value
-    ) &&
-    /[a-z]/.test(
-      value
-    ) &&
-    /\d/.test(
-      value
-    ) &&
-    /[^A-Za-z0-9\s]/.test(
-      value
-    )
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9\s]/.test(value)
   );
 }
 
@@ -383,7 +54,211 @@ export default function Users() {
       : "mn";
 
   const t =
-    translations[lang];
+    lang === "en"
+      ? {
+          pageTitle: "Users",
+          pageSubtitle:
+            "Add users and configure permissions",
+          totalUsers:
+            "Total users",
+          newUser:
+            "New user",
+          newUserDescription:
+            "Users will be given a temporary password. They will create a new password on first login.",
+          unblockTitle:
+            "Unblock user",
+          unblockDescription:
+            "Create a new password for the user and unblock the account.",
+          email: "Email",
+          temporaryPassword:
+            "Temporary password",
+          newPassword:
+            "New password",
+          passwordPlaceholder:
+            "At least 10 characters",
+          role: "Role",
+          viewer: "Viewer",
+          admin: "Admin",
+          add: "Add",
+          adding:
+            "Adding...",
+          adminCount:
+            "Admin",
+          usersList:
+            "Users list",
+          usersListDescription:
+            "Users with Admin and Viewer roles",
+          user: "USER",
+          roleHeader:
+            "ROLE",
+          password:
+            "PASSWORD",
+          status:
+            "STATUS",
+          login:
+            "LOGIN",
+          created:
+            "CREATED",
+          action:
+            "ACTION",
+          you: "You",
+          updated:
+            "Updated",
+          needsUpdate:
+            "Needs to be updated",
+          active:
+            "Active",
+          inactive:
+            "Inactive",
+          normal:
+            "Normal",
+          unblock:
+            "Unblock",
+          unblocking:
+            "Unblocking...",
+          cancel:
+            "Cancel",
+          unblockSubmit:
+            "Create password and unblock",
+          delete:
+            "Delete",
+          deleting:
+            "Deleting...",
+          loading:
+            "Loading...",
+          noUsers:
+            "No users found",
+          userAdded:
+            "User added successfully",
+          userUpdated:
+            "User updated successfully",
+          userDeleted:
+            "User permanently deleted",
+          userUnblocked:
+            "User unblocked successfully",
+          loadError:
+            "Failed to load users",
+          createError:
+            "Failed to add user",
+          updateError:
+            "Failed to update user",
+          deleteError:
+            "Failed to delete user",
+          unblockError:
+            "Failed to unblock user",
+          passwordRequirement:
+            "10+ characters, uppercase, lowercase, number and special character",
+          adminLimit:
+            "A maximum of 2 Admin users is allowed",
+          deleteQuestion:
+            "Are you sure you want to permanently delete this user?"
+        }
+      : {
+          pageTitle:
+            "Хэрэглэгчид",
+          pageSubtitle:
+            "Хэрэглэгч нэмэх болон эрх тохируулах",
+          totalUsers:
+            "Нийт хэрэглэгч",
+          newUser:
+            "Шинэ хэрэглэгч",
+          newUserDescription:
+            "Хэрэглэгчид түр нууц үг өгнө. Эхний нэвтрэлтээр шинэ нууц үг үүсгэнэ.",
+          unblockTitle:
+            "Хэрэглэгчийн блок гаргах",
+          unblockDescription:
+            "Хэрэглэгчид шинэ нууц үг үүсгээд блок гаргана.",
+          email:
+            "И-мэйл",
+          temporaryPassword:
+            "Түр нууц үг",
+          newPassword:
+            "Шинэ нууц үг",
+          passwordPlaceholder:
+            "Хамгийн багадаа 10 тэмдэгт",
+          role:
+            "Эрх",
+          viewer:
+            "Viewer",
+          admin:
+            "Admin",
+          add:
+            "Нэмэх",
+          adding:
+            "Нэмж байна...",
+          adminCount:
+            "Админ",
+          usersList:
+            "Хэрэглэгчдийн жагсаалт",
+          usersListDescription:
+            "Admin болон Viewer эрхтэй хэрэглэгчид",
+          user:
+            "ХЭРЭГЛЭГЧ",
+          roleHeader:
+            "ЭРХ",
+          password:
+            "НУУЦ ҮГ",
+          status:
+            "ТӨЛӨВ",
+          login:
+            "LOGIN",
+          created:
+            "ҮҮСГЭСЭН",
+          action:
+            "ҮЙЛДЭЛ",
+          you:
+            "Та",
+          updated:
+            "Шинэчилсэн",
+          needsUpdate:
+            "Шинэчлэх шаардлагатай",
+          active:
+            "Идэвхтэй",
+          inactive:
+            "Идэвхгүй",
+          normal:
+            "Хэвийн",
+          unblock:
+            "Блок гаргах",
+          unblocking:
+            "Блок гаргаж байна...",
+          cancel:
+            "Цуцлах",
+          unblockSubmit:
+            "Нууц үг үүсгээд блок гаргах",
+          delete:
+            "Устгах",
+          deleting:
+            "Устгаж байна...",
+          loading:
+            "Уншиж байна...",
+          noUsers:
+            "Хэрэглэгч байхгүй байна",
+          userAdded:
+            "Хэрэглэгч амжилттай нэмэгдлээ",
+          userUpdated:
+            "Хэрэглэгчийн эрх шинэчлэгдлээ",
+          userDeleted:
+            "Хэрэглэгч бүрэн устгагдлаа",
+          userUnblocked:
+            "Хэрэглэгчийн блок амжилттай гарлаа",
+          loadError:
+            "Хэрэглэгчдийн мэдээлэл татахад алдаа гарлаа",
+          createError:
+            "Хэрэглэгч нэмэхэд алдаа гарлаа",
+          updateError:
+            "Хэрэглэгч шинэчлэхэд алдаа гарлаа",
+          deleteError:
+            "Хэрэглэгч устгахад алдаа гарлаа",
+          unblockError:
+            "Блок гаргахад алдаа гарлаа",
+          passwordRequirement:
+            "10+ тэмдэгт, том/жижиг үсэг, тоо, тусгай тэмдэг",
+          adminLimit:
+            "Админ хэрэглэгчийн тоо ихдээ 2 байна",
+          deleteQuestion:
+            "хэрэглэгчийг бүрэн устгах уу?"
+        };
 
   const [
     users,
@@ -456,9 +331,7 @@ export default function Users() {
               "admin" &&
             item.is_active
         ).length,
-      [
-        users
-      ]
+      [users]
     );
 
   const adminLimitReached =
@@ -473,43 +346,26 @@ export default function Users() {
         }
 
         try {
-          setLoading(
-            true
-          );
-
-          setError(
-            ""
-          );
+          setLoading(true);
+          setError("");
 
           const response =
             await fetch(
               `${API}/users`,
               {
-                method:
-                  "GET",
-
                 headers: {
                   Accept:
                     "application/json",
-
                   Authorization:
                     `Bearer ${token}`
                 }
               }
             );
 
-          let data = null;
+          const data =
+            await response.json();
 
-          try {
-            data =
-              await response.json();
-          } catch {
-            data = null;
-          }
-
-          if (
-            !response.ok
-          ) {
+          if (!response.ok) {
             throw new Error(
               data?.message ||
                 t.loadError
@@ -525,25 +381,13 @@ export default function Users() {
 
           setUsers(
             rows.map(
-              (
-                item
-              ) => ({
+              (item) => ({
                 ...item,
 
                 id:
                   Number(
                     item.id
                   ),
-
-                display_id:
-                  item.display_id !==
-                    undefined &&
-                  item.display_id !==
-                    null
-                    ? Number(
-                        item.display_id
-                      )
-                    : null,
 
                 role:
                   String(
@@ -582,9 +426,7 @@ export default function Users() {
               t.loadError
           );
         } finally {
-          setLoading(
-            false
-          );
+          setLoading(false);
         }
       },
       [
@@ -594,9 +436,23 @@ export default function Users() {
     );
 
   useEffect(() => {
+  if (!success) {
+    return;
+  }
+
+  const timer =
+    setTimeout(() => {
+      setSuccess("");
+    }, 3200);
+
+  return () => {
+    clearTimeout(timer);
+  };
+}, [success]);
+
+  useEffect(() => {
     if (
-      user?.role ===
-      "admin"
+      user?.role === "admin"
     ) {
       loadUsers();
     }
@@ -608,51 +464,28 @@ export default function Users() {
   function resetForm() {
     setEmail("");
     setPassword("");
-    setRole(
-      "viewer"
-    );
-    setShowPassword(
-      false
-    );
-    setUnblockTarget(
-      null
-    );
+    setRole("viewer");
+    setShowPassword(false);
+    setUnblockTarget(null);
   }
 
-  function openUnblock(
-    item
-  ) {
-    setUnblockTarget(
-      item
-    );
-
-    setEmail(
-      item.email
-    );
-
+  function openUnblock(item) {
+    setUnblockTarget(item);
+    setEmail(item.email);
     setPassword("");
-
-    setRole(
-      item.role
-    );
-
-    setShowPassword(
-      false
-    );
-
+    setRole(item.role);
+    setShowPassword(false);
     setError("");
     setSuccess("");
 
     window.scrollTo({
       top: 0,
-      behavior:
-        "smooth"
+      behavior: "smooth"
     });
   }
 
   function cancelUnblock() {
     resetForm();
-
     setError("");
     setSuccess("");
   }
@@ -683,8 +516,7 @@ export default function Users() {
     }
 
     if (
-      role ===
-        "admin" &&
+      role === "admin" &&
       adminLimitReached
     ) {
       throw new Error(
@@ -696,8 +528,7 @@ export default function Users() {
       await fetch(
         `${API}/users`,
         {
-          method:
-            "POST",
+          method: "POST",
 
           headers: {
             Accept:
@@ -714,26 +545,16 @@ export default function Users() {
             JSON.stringify({
               email:
                 cleanEmail,
-
               password,
-
               role
             })
         }
       );
 
-    let data = null;
+    const data =
+      await response.json();
 
-    try {
-      data =
-        await response.json();
-    } catch {
-      data = null;
-    }
-
-    if (
-      !response.ok
-    ) {
+    if (!response.ok) {
       throw new Error(
         data?.message ||
           t.createError
@@ -750,9 +571,7 @@ export default function Users() {
   }
 
   async function unblockUser() {
-    if (
-      !unblockTarget
-    ) {
+    if (!unblockTarget) {
       return;
     }
 
@@ -775,8 +594,7 @@ export default function Users() {
       await fetch(
         `${API}/users/${realUserId}/unblock`,
         {
-          method:
-            "POST",
+          method: "POST",
 
           headers: {
             Accept:
@@ -796,18 +614,10 @@ export default function Users() {
         }
       );
 
-    let data = null;
+    const data =
+      await response.json();
 
-    try {
-      data =
-        await response.json();
-    } catch {
-      data = null;
-    }
-
-    if (
-      !response.ok
-    ) {
+    if (!response.ok) {
       throw new Error(
         data?.message ||
           t.unblockError
@@ -829,16 +639,11 @@ export default function Users() {
     event.preventDefault();
 
     try {
-      setSubmitting(
-        true
-      );
-
+      setSubmitting(true);
       setError("");
       setSuccess("");
 
-      if (
-        unblockTarget
-      ) {
+      if (unblockTarget) {
         await unblockUser();
       } else {
         await createUser();
@@ -846,16 +651,10 @@ export default function Users() {
     } catch (err) {
       setError(
         err?.message ||
-          (
-            unblockTarget
-              ? t.unblockError
-              : t.createError
-          )
+          t.createError
       );
     } finally {
-      setSubmitting(
-        false
-      );
+      setSubmitting(false);
     }
   }
 
@@ -864,9 +663,7 @@ export default function Users() {
     changes
   ) {
     const realUserId =
-      Number(
-        item.id
-      );
+      Number(item.id);
 
     try {
       setUpdatingId(
@@ -880,8 +677,7 @@ export default function Users() {
         await fetch(
           `${API}/users/${realUserId}`,
           {
-            method:
-              "PATCH",
+            method: "PATCH",
 
             headers: {
               Accept:
@@ -910,46 +706,52 @@ export default function Users() {
         data = null;
       }
 
-      if (
-        !response.ok
-      ) {
+      console.log(
+        "PATCH USER RESPONSE:",
+        response.status,
+        data
+      );
+
+      if (!response.ok) {
         throw new Error(
           data?.message ||
             t.updateError
         );
       }
 
+      if (!data?.user) {
+        throw new Error(
+          t.updateError
+        );
+      }
+
       setUsers(
-        (
-          currentUsers
-        ) =>
-          currentUsers.map(
-            (
-              currentUser
-            ) =>
-              Number(
-                currentUser.id
-              ) ===
+        (current) =>
+          current.map(
+            (row) =>
+              Number(row.id) ===
               realUserId
                 ? {
-                    ...currentUser,
+                    ...row,
                     ...data.user,
                     id:
                       realUserId,
                     display_id:
-                      currentUser
-                        .display_id
+                      row.display_id
                   }
-                : currentUser
+                : row
           )
       );
 
       setSuccess(
         t.userUpdated
       );
-
-      await loadUsers();
     } catch (err) {
+      console.error(
+        "UPDATE USER ERROR:",
+        err
+      );
+
       setError(
         err?.message ||
           t.updateError
@@ -957,9 +759,7 @@ export default function Users() {
 
       await loadUsers();
     } finally {
-      setUpdatingId(
-        null
-      );
+      setUpdatingId(null);
     }
   }
 
@@ -973,16 +773,12 @@ export default function Users() {
           : `${t.deleteQuestion}\n${item.email}`
       );
 
-    if (
-      !confirmed
-    ) {
+    if (!confirmed) {
       return;
     }
 
     const realUserId =
-      Number(
-        item.id
-      );
+      Number(item.id);
 
     try {
       setDeletingId(
@@ -996,8 +792,7 @@ export default function Users() {
         await fetch(
           `${API}/users/${realUserId}`,
           {
-            method:
-              "DELETE",
+            method: "DELETE",
 
             headers: {
               Accept:
@@ -1009,18 +804,10 @@ export default function Users() {
           }
         );
 
-      let data = null;
+      const data =
+        await response.json();
 
-      try {
-        data =
-          await response.json();
-      } catch {
-        data = null;
-      }
-
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
           data?.message ||
             t.deleteError
@@ -1029,19 +816,26 @@ export default function Users() {
 
       if (
         data?.permanently_deleted !==
-          true
+        true
       ) {
         throw new Error(
           t.deleteError
         );
       }
 
+      setUsers(
+        (current) =>
+          current.filter(
+            (row) =>
+              Number(row.id) !==
+              realUserId
+          )
+      );
+
       if (
-        unblockTarget &&
         Number(
-          unblockTarget.id
-        ) ===
-          realUserId
+          unblockTarget?.id
+        ) === realUserId
       ) {
         resetForm();
       }
@@ -1057,21 +851,55 @@ export default function Users() {
           t.deleteError
       );
     } finally {
-      setDeletingId(
-        null
-      );
+      setDeletingId(null);
     }
   }
 
   if (
-    user?.role !==
-    "admin"
+    user?.role !== "admin"
   ) {
     return null;
   }
 
   return (
     <div className="users-page">
+
+          {success && (
+      <div className="users-toast-wrap">
+        <div className="users-toast">
+          <div className="users-toast-icon">
+            ✓
+          </div>
+
+          <div className="users-toast-content">
+            <strong>
+              {lang === "en"
+                ? "Success"
+                : "Амжилттай"}
+            </strong>
+
+            <span>
+              {success}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="users-toast-close"
+            onClick={() =>
+              setSuccess("")
+            }
+          >
+            <X
+              size={16}
+              strokeWidth={2}
+            />
+          </button>
+
+          <div className="users-toast-progress" />
+        </div>
+      </div>
+    )}
       <div className="users-page-header">
         <div>
           <h2>
@@ -1123,13 +951,9 @@ export default function Users() {
             <input
               type="email"
               value={email}
-              onChange={(
-                event
-              ) =>
+              onChange={(event) =>
                 setEmail(
-                  event
-                    .target
-                    .value
+                  event.target.value
                 )
               }
               placeholder="user@misheel.mn"
@@ -1156,16 +980,10 @@ export default function Users() {
                     ? "text"
                     : "password"
                 }
-                value={
-                  password
-                }
-                onChange={(
-                  event
-                ) =>
+                value={password}
+                onChange={(event) =>
                   setPassword(
-                    event
-                      .target
-                      .value
+                    event.target.value
                   )
                 }
                 placeholder={
@@ -1180,9 +998,7 @@ export default function Users() {
                 className="users-password-eye"
                 onClick={() =>
                   setShowPassword(
-                    (
-                      value
-                    ) =>
+                    (value) =>
                       !value
                   )
                 }
@@ -1207,13 +1023,9 @@ export default function Users() {
 
             <select
               value={role}
-              onChange={(
-                event
-              ) =>
+              onChange={(event) =>
                 setRole(
-                  event
-                    .target
-                    .value
+                  event.target.value
                 )
               }
               disabled={
@@ -1300,11 +1112,7 @@ export default function Users() {
           </div>
         )}
 
-        {success && (
-          <div className="users-message users-message-success">
-            {success}
-          </div>
-        )}
+
       </div>
 
       <div className="users-list-card">
@@ -1326,8 +1134,7 @@ export default function Users() {
           <div className="users-loading">
             {t.loading}
           </div>
-        ) : users.length ===
-          0 ? (
+        ) : users.length === 0 ? (
           <div className="users-empty">
             {t.noUsers}
           </div>
@@ -1406,9 +1213,7 @@ export default function Users() {
                                 item.email ||
                                   "U"
                               )
-                                .charAt(
-                                  0
-                                )
+                                .charAt(0)
                                 .toUpperCase()}
                             </div>
 
@@ -1429,9 +1234,7 @@ export default function Users() {
 
                             {isCurrentUser && (
                               <span className="users-you-badge">
-                                {
-                                  t.you
-                                }
+                                {t.you}
                               </span>
                             )}
                           </div>
@@ -1449,16 +1252,22 @@ export default function Users() {
                               item.role
                             }
                             disabled={
-                              updatingId ===
-                              Number(
-                                item.id
-                              )
+                              busy
                             }
                             onChange={(
                               event
                             ) => {
                               const newRole =
-                                event.target.value;
+                                event
+                                  .target
+                                  .value;
+
+                              if (
+                                newRole ===
+                                item.role
+                              ) {
+                                return;
+                              }
 
                               updateUser(
                                 item,
@@ -1473,15 +1282,7 @@ export default function Users() {
                               {t.viewer}
                             </option>
 
-                            <option
-                              value="admin"
-                              disabled={
-                                item.role !==
-                                  "admin" &&
-                                activeAdminCount >=
-                                  MAX_ADMINS
-                              }
-                            >
+                            <option value="admin">
                               {t.admin}
                             </option>
                           </select>
@@ -1545,9 +1346,7 @@ export default function Users() {
                                 )
                               }
                             >
-                              {
-                                t.unblock
-                              }
+                              {t.unblock}
                             </button>
                           ) : (
                             <span className="users-login-ok">

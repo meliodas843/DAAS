@@ -1,6 +1,7 @@
 import {
   NavLink
 } from "react-router-dom";
+
 import {
   LayoutDashboard,
   HandCoins,
@@ -9,11 +10,14 @@ import {
   Settings,
   LogOut,
   PanelLeftClose,
-  PanelRightOpen
+  PanelRightOpen,
+  CircleHelp
 } from "lucide-react";
+
 import {
   useDashboard
 } from "../context/DashboardContext";
+
 import {
   useAuth
 } from "../context/AuthContext";
@@ -22,7 +26,7 @@ const baseItems = [
   {
     to: "/",
     mn: "Удирдлагын талбар",
-    en: "Executive Overview ",
+    en: "Executive Overview",
     icon: LayoutDashboard
   },
   {
@@ -42,7 +46,7 @@ const baseItems = [
     mn: "Орлого / Зардал",
     en: "Revenue / Expense",
     icon: ChartNoAxesCombined
-  },
+  }
 ];
 
 export default function Sidebar() {
@@ -57,13 +61,6 @@ export default function Sidebar() {
     logout
   } = useAuth();
 
-  const userInitial =
-    String(
-      user?.email || "U"
-    )
-      .charAt(0)
-      .toUpperCase();
-
   return (
     <aside
       className={`sidebar ${
@@ -74,11 +71,11 @@ export default function Sidebar() {
     >
       <div className="brand">
         <div className="brand-main">
-        <img
-          src="/misheel.jpeg"
-          alt="Мишээл групп"
-          className="brand-logo"
-        />
+          <img
+            src="/misheel.jpeg"
+            alt="Мишээл групп"
+            className="brand-logo"
+          />
 
           {!sidebarCollapsed && (
             <div className="brand-text">
@@ -98,8 +95,7 @@ export default function Sidebar() {
           className="sidebar-collapse-button"
           onClick={() =>
             setSidebarCollapsed(
-              (value) =>
-                !value
+              (value) => !value
             )
           }
           title={
@@ -178,14 +174,48 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        {user?.role ===
-          "admin" && (
+        <NavLink
+          to="/help"
+          title={
+            sidebarCollapsed
+              ? language === "mn"
+                ? "Тусламж"
+                : "Help"
+              : undefined
+          }
+          className={({
+            isActive
+          }) =>
+            `side-nav-item ${
+              isActive
+                ? "active"
+                : ""
+            }`
+          }
+        >
+          <span className="side-nav-icon">
+            <CircleHelp
+              size={18}
+              strokeWidth={2}
+            />
+          </span>
+
+          {!sidebarCollapsed && (
+            <span className="side-nav-label">
+              {language === "mn"
+                ? "Тусламж"
+                : "Help"}
+            </span>
+          )}
+        </NavLink>
+
+        {user?.role === "admin" && (
           <NavLink
             to="/users"
             title={
               sidebarCollapsed
                 ? language === "mn"
-                  ? "Тохи"
+                  ? "Тохиргоо"
                   : "Settings"
                 : undefined
             }

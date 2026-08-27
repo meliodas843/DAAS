@@ -9,8 +9,6 @@ import {
   YAxis
 } from "recharts";
 
-import HoverScroll from "./HoverScroll";
-
 function formatCompact(value) {
   const number =
     Number(value || 0);
@@ -68,9 +66,7 @@ function formatCompact(value) {
     }K`;
   }
 
-  return `${Math.round(
-    number
-  )}`;
+  return `${Math.round(number)}`;
 }
 
 function formatTooltip(value) {
@@ -79,9 +75,7 @@ function formatTooltip(value) {
 
   return `₮${Math.round(
     number
-  ).toLocaleString(
-    "en-US"
-  )}`;
+  ).toLocaleString("en-US")}`;
 }
 
 function wrapLabel(
@@ -93,17 +87,12 @@ function wrapLabel(
   }
 
   const words =
-    String(
-      text
-    ).split(" ");
+    String(text).split(" ");
 
   const lines = [];
-
   let current = "";
 
-  for (
-    const word of words
-  ) {
+  for (const word of words) {
     const next =
       current
         ? `${current} ${word}`
@@ -113,30 +102,21 @@ function wrapLabel(
       next.length <=
       maxLength
     ) {
-      current =
-        next;
+      current = next;
     } else {
       if (current) {
-        lines.push(
-          current
-        );
+        lines.push(current);
       }
 
-      current =
-        word;
+      current = word;
     }
   }
 
   if (current) {
-    lines.push(
-      current
-    );
+    lines.push(current);
   }
 
-  return lines.slice(
-    0,
-    3
-  );
+  return lines.slice(0, 3);
 }
 
 function CustomYAxisTick({
@@ -146,13 +126,11 @@ function CustomYAxisTick({
 }) {
   const lines =
     wrapLabel(
-      payload?.value ||
-        "",
+      payload?.value || "",
       24
     );
 
-  const lineHeight =
-    12;
+  const lineHeight = 12;
 
   const startY =
     y -
@@ -204,33 +182,22 @@ function ValueLabel({
     Number(value || 0);
 
   if (
-    !Number.isFinite(
-      number
-    ) ||
+    !Number.isFinite(number) ||
     number === 0
   ) {
     return null;
   }
 
   const centerY =
-    y +
-    height / 2;
+    y + height / 2;
 
   const label =
-    formatCompact(
-      number
-    );
+    formatCompact(number);
 
-  if (
-    number > 0
-  ) {
+  if (number > 0) {
     return (
       <text
-        x={
-          x +
-          width +
-          8
-        }
+        x={x + width + 8}
         y={centerY}
         dominantBaseline="middle"
         textAnchor="start"
@@ -245,11 +212,7 @@ function ValueLabel({
 
   return (
     <text
-      x={
-        x +
-        width -
-        8
-      }
+      x={x + width - 8}
       y={centerY}
       dominantBaseline="middle"
       textAnchor="end"
@@ -262,9 +225,7 @@ function ValueLabel({
   );
 }
 
-function calculateAxis(
-  data
-) {
+function calculateAxis(data) {
   const values =
     data.map(
       (item) =>
@@ -287,9 +248,7 @@ function calculateAxis(
 
   let min = 0;
 
-  if (
-    minValue < 0
-  ) {
+  if (minValue < 0) {
     const absMin =
       Math.abs(
         minValue
@@ -327,8 +286,7 @@ function calculateAxis(
     3_000_000_000;
 
   if (
-    maxValue >
-    max
+    maxValue > max
   ) {
     max =
       Math.ceil(
@@ -346,8 +304,44 @@ function calculateAxis(
 
 function createTicks(
   min,
-  max
+  max,
+  tickMode
 ) {
+  if (
+    tickMode ===
+    "spaced"
+  ) {
+    const ticks = [];
+
+    const start =
+      Math.floor(
+        min /
+          1_000_000_000
+      ) *
+      1_000_000_000;
+
+    const end =
+      Math.ceil(
+        max /
+          1_000_000_000
+      ) *
+      1_000_000_000;
+
+    for (
+      let value =
+        start;
+      value <= end;
+      value +=
+        1_000_000_000
+    ) {
+      ticks.push(
+        value
+      );
+    }
+
+    return ticks;
+  }
+
   const ticks = [];
 
   if (
@@ -423,11 +417,10 @@ export default function HorizontalBarChart({
   data = [],
   color = "#2966e8",
   yAxisWidth = 220,
-  rowHeight = 52,
   barSize = 20,
-  visibleHeight = 285,
   language = "mn",
-  valueLabel
+  valueLabel,
+  tickMode = "default"
 }) {
   const tooltipLabel =
     valueLabel ||
@@ -442,31 +435,16 @@ export default function HorizontalBarChart({
       ? data.map(
           (item) => ({
             ...item,
+
             value:
               Number(
-                item.value ||
-                  0
+                item.value || 0
               )
           })
         )
       : [];
 
-  const actualRowHeight =
-    Math.max(
-      rowHeight,
-      52
-    );
-
-  const chartHeight =
-    Math.max(
-      visibleHeight +
-        1,
-      safeData.length *
-        actualRowHeight +
-        18
-    );
-
-  const {
+  let {
     min: axisMin,
     max: axisMax
   } =
@@ -474,137 +452,137 @@ export default function HorizontalBarChart({
       safeData
     );
 
+  if (
+    tickMode ===
+    "spaced"
+  ) {
+    axisMin =
+      Math.floor(
+        axisMin /
+          1_000_000_000
+      ) *
+      1_000_000_000;
+
+    if (
+      axisMin === 0
+    ) {
+      axisMin =
+        -1_000_000_000;
+    }
+
+    axisMax =
+      Math.ceil(
+        axisMax /
+          1_000_000_000
+      ) *
+      1_000_000_000;
+  }
+
   const axisTicks =
     createTicks(
       axisMin,
-      axisMax
+      axisMax,
+      tickMode
     );
 
-  const chartLeftMargin =
-    10;
-
-  const chartRightMargin =
-    75;
+  const leftMargin = 15;
+  const rightMargin = 70;
 
   return (
     <div className="fixed-axis-chart">
-      <HoverScroll
-        direction="vertical"
-        className="fixed-axis-hover-scroll"
-      >
-        <div
-          className="fixed-axis-chart-body"
-          style={{
-            height:
-              `${chartHeight}px`
-          }}
+      <div className="fixed-axis-chart-main">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
         >
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
+          <BarChart
+            data={safeData}
+            layout="vertical"
+            margin={{
+              top: 12,
+              right:
+                rightMargin,
+              bottom: 8,
+              left:
+                leftMargin
+            }}
+            barCategoryGap={12}
           >
-            <BarChart
-              data={safeData}
-              layout="vertical"
-              margin={{
-                top: 5,
-                right:
-                  chartRightMargin,
-                bottom: 0,
-                left:
-                  chartLeftMargin
+            <CartesianGrid
+              strokeDasharray="3 3"
+              horizontal={false}
+              stroke="#edf1f7"
+            />
+
+            <XAxis
+              type="number"
+              domain={[
+                axisMin,
+                axisMax
+              ]}
+              hide
+              allowDataOverflow
+            />
+
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={
+                yAxisWidth
+              }
+              axisLine={
+                false
+              }
+              tickLine={
+                false
+              }
+              interval={0}
+              tick={
+                <CustomYAxisTick />
+              }
+            />
+
+            <Tooltip
+              cursor={{
+                fill:
+                  "rgba(15, 23, 42, 0.025)"
               }}
-              barCategoryGap={
-                12
+              formatter={(
+                value
+              ) => [
+                formatTooltip(
+                  value
+                ),
+                tooltipLabel
+              ]}
+            />
+
+            <Bar
+              dataKey="value"
+              fill={color}
+              barSize={
+                barSize
+              }
+              radius={[
+                0,
+                5,
+                5,
+                0
+              ]}
+              animationDuration={
+                700
               }
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                horizontal={
-                  false
-                }
-                stroke="#edf1f7"
-              />
-
-              <XAxis
-                type="number"
-                domain={[
-                  axisMin,
-                  axisMax
-                ]}
-                hide
-                allowDataOverflow
-              />
-
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={
-                  yAxisWidth
-                }
-                axisLine={
-                  false
-                }
-                tickLine={
-                  false
-                }
-                interval={0}
-                tick={
-                  <CustomYAxisTick />
-                }
-              />
-
-              <Tooltip
-                cursor={{
-                  fill:
-                    "rgba(15, 23, 42, 0.025)"
-                }}
-                formatter={(
-                  value
-                ) => [
-                  formatTooltip(
-                    value
-                  ),
-                  tooltipLabel
-                ]}
-              />
-
-              <Bar
+              <LabelList
                 dataKey="value"
-                fill={
-                  color
+                content={
+                  <ValueLabel />
                 }
-                barSize={
-                  barSize
-                }
-                radius={[
-                  0,
-                  5,
-                  5,
-                  0
-                ]}
-                isAnimationActive={
-                  true
-                }
-                animationBegin={
-                  100
-                }
-                animationDuration={
-                  1000
-                }
-                animationEasing="ease-out"
-              >
-                <LabelList
-                  dataKey="value"
-                  content={
-                    <ValueLabel />
-                  }
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </HoverScroll>
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       <div className="shared-bottom-axis">
         <div
@@ -613,25 +591,23 @@ export default function HorizontalBarChart({
             marginLeft:
               `${
                 yAxisWidth +
-                chartLeftMargin
+                leftMargin
               }px`,
+
             marginRight:
-              `${chartRightMargin}px`
+              `${rightMargin}px`
           }}
         >
           {axisTicks.map(
             (tick) => {
               const position =
-                axisMax ===
-                axisMin
-                  ? 0
-                  : (
-                      (tick -
-                        axisMin) /
-                      (axisMax -
-                        axisMin)
-                    ) *
-                    100;
+                (
+                  (tick -
+                    axisMin) /
+                  (axisMax -
+                    axisMin)
+                ) *
+                100;
 
               return (
                 <span

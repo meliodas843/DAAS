@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,12 +15,14 @@ import {
   useState
 } from "react";
 
-import {
-  getDashboardFilters
-} from "../utils/filters";
-
 import Card from "../components/Card";
 import HorizontalBarChart from "../components/HorizontalBarChart";
+import ExcelDownloadButton from "../components/ExcelDownloadButton";
+
+import {
+  exportChartToExcel,
+  exportRevenueExpenseToExcel
+} from "../utils/exportExcel";
 
 import {
   getBranchRevenueExpense,
@@ -32,78 +35,12 @@ import {
   useDashboard
 } from "../context/DashboardContext";
 
-const translations = {
-  mn: {
-    incomeByAccount:
-      "Орлогын дүн дансаар",
-
-    expenseByCategory:
-      "Зардлын бүлгээр",
-
-    incomeExpenseByBranch:
-      "Орлого Зардлын дүн салбараар",
-
-    expenseByAccount:
-      "Зардлын дүн дансаар",
-
-    income:
-      "Орлого",
-
-    expense:
-      "Зардал",
-
-    amount:
-      "Дүн",
-
-    loading:
-      "Уншиж байна...",
-
-    backendError:
-      "Backend алдаа"
-  },
-
-  en: {
-    incomeByAccount:
-      "Income Amount by Account",
-
-    expenseByCategory:
-      "Expense by Category",
-
-    incomeExpenseByBranch:
-      "Income & Expense Amount by Branch",
-
-    expenseByAccount:
-      "Expense Amount by Account",
-
-    income:
-      "Income",
-
-    expense:
-      "Expense",
-
-    amount:
-      "Amount",
-
-    loading:
-      "Loading...",
-
-    backendError:
-      "Backend error"
-  }
-};
-
-function formatCompact(
-  value
-) {
+function formatCompact(value) {
   const number =
-    Number(
-      value || 0
-    );
+    Number(value || 0);
 
   const absolute =
-    Math.abs(
-      number
-    );
+    Math.abs(number);
 
   const sign =
     number < 0
@@ -119,15 +56,9 @@ function formatCompact(
       1_000_000_000;
 
     return `${sign}${
-      Number.isInteger(
-        result
-      )
-        ? result.toFixed(
-            0
-          )
-        : result.toFixed(
-            1
-          )
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
     }B`;
   }
 
@@ -140,15 +71,9 @@ function formatCompact(
       1_000_000;
 
     return `${sign}${
-      Number.isInteger(
-        result
-      )
-        ? result.toFixed(
-            0
-          )
-        : result.toFixed(
-            1
-          )
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
     }M`;
   }
 
@@ -161,58 +86,39 @@ function formatCompact(
       1_000;
 
     return `${sign}${
-      Number.isInteger(
-        result
-      )
-        ? result.toFixed(
-            0
-          )
-        : result.toFixed(
-            1
-          )
+      Number.isInteger(result)
+        ? result.toFixed(0)
+        : result.toFixed(1)
     }K`;
   }
 
-  return `${Math.round(
-    number
-  )}`;
+  return `${Math.round(number)}`;
 }
 
-function formatTooltip(
-  value
-) {
+function formatTooltip(value) {
   const number =
-    Number(
-      value || 0
-    );
+    Number(value || 0);
 
   return `₮${Math.round(
     number
-  ).toLocaleString(
-    "en-US"
-  )}`;
+  ).toLocaleString("en-US")}`;
 }
 
 function wrapLabel(
   text,
-  maxLength = 20
+  maxLength = 24
 ) {
   if (!text) {
     return [""];
   }
 
   const words =
-    String(
-      text
-    ).split(" ");
+    String(text).split(" ");
 
   const lines = [];
-
   let current = "";
 
-  for (
-    const word of words
-  ) {
+  for (const word of words) {
     const next =
       current
         ? `${current} ${word}`
@@ -222,75 +128,50 @@ function wrapLabel(
       next.length <=
       maxLength
     ) {
-      current =
-        next;
+      current = next;
     } else {
-      if (
-        current
-      ) {
-        lines.push(
-          current
-        );
+      if (current) {
+        lines.push(current);
       }
 
-      current =
-        word;
+      current = word;
     }
   }
 
-  if (
-    current
-  ) {
-    lines.push(
-      current
-    );
+  if (current) {
+    lines.push(current);
   }
 
-  return lines.slice(
-    0,
-    3
-  );
+  return lines.slice(0, 3);
 }
 
-function CustomYAxisTick({
-  x,
+function RightSideYAxisTick({
   y,
   payload
 }) {
   const lines =
     wrapLabel(
-      payload?.value ||
-        "",
-      20
+      payload?.value || "",
+      24
     );
 
-  const lineHeight =
-    12;
+  const lineHeight = 12;
 
   const startY =
     y -
-    ((lines.length -
-      1) *
+    ((lines.length - 1) *
       lineHeight) /
       2;
 
   return (
     <g>
       <text
-        x={
-          x - 8
-        }
-        y={
-          startY
-        }
-        textAnchor="end"
+        x={8}
+        y={startY}
+        textAnchor="start"
         fill="#536177"
-        fontSize={
-          10.5
-        }
-        fontWeight={
-          500
-        }
+        fontSize={10.5}
+        fontWeight={500}
       >
         {lines.map(
           (
@@ -299,12 +180,9 @@ function CustomYAxisTick({
           ) => (
             <tspan
               key={`${line}-${index}`}
-              x={
-                x - 8
-              }
+              x={8}
               dy={
-                index ===
-                0
+                index === 0
                   ? 0
                   : lineHeight
               }
@@ -318,81 +196,442 @@ function CustomYAxisTick({
   );
 }
 
-const BRANCH_AXIS_MIN =
-  0;
+function RightValueLabel({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  value
+}) {
+  const number =
+    Number(value || 0);
 
-const BRANCH_AXIS_MAX =
-  3_000_000_000;
+  if (
+    !Number.isFinite(number) ||
+    number === 0
+  ) {
+    return null;
+  }
 
-const BRANCH_AXIS_TICKS = [
-  0,
-  500_000_000,
-  1_000_000_000,
-  2_000_000_000,
-  3_000_000_000
-];
+  return (
+    <text
+      x={x + width + 7}
+      y={y + height / 2}
+      dominantBaseline="middle"
+      textAnchor="start"
+      fill="#101827"
+      fontSize={10}
+      fontWeight={800}
+    >
+      {formatCompact(number)}
+    </text>
+  );
+}
 
-function BranchRevenueExpenseChart({
+function getExpenseAxisMax(
+  data
+) {
+  const maxValue =
+    Math.max(
+      ...data.map(
+        (item) =>
+          Math.abs(
+            Number(
+              item.value || 0
+            )
+          )
+      ),
+      0
+    );
+
+  if (
+    maxValue <=
+    500_000_000
+  ) {
+    return 500_000_000;
+  }
+
+  if (
+    maxValue <=
+    1_000_000_000
+  ) {
+    return 1_000_000_000;
+  }
+
+  if (
+    maxValue <=
+    2_000_000_000
+  ) {
+    return 2_000_000_000;
+  }
+
+  if (
+    maxValue <=
+    3_000_000_000
+  ) {
+    return 3_000_000_000;
+  }
+
+  return (
+    Math.ceil(
+      maxValue /
+        1_000_000_000
+    ) *
+    1_000_000_000
+  );
+}
+
+function getTicks(max) {
+  if (
+    max <=
+    500_000_000
+  ) {
+    return [
+      0,
+      100_000_000,
+      200_000_000,
+      300_000_000,
+      400_000_000,
+      500_000_000
+    ];
+  }
+
+  if (
+    max <=
+    1_000_000_000
+  ) {
+    return [
+      0,
+      250_000_000,
+      500_000_000,
+      750_000_000,
+      1_000_000_000
+    ];
+  }
+
+  if (
+    max <=
+    2_000_000_000
+  ) {
+    return [
+      0,
+      500_000_000,
+      1_000_000_000,
+      1_500_000_000,
+      2_000_000_000
+    ];
+  }
+
+  if (
+    max <=
+    3_000_000_000
+  ) {
+    return [
+      0,
+      500_000_000,
+      1_000_000_000,
+      2_000_000_000,
+      3_000_000_000
+    ];
+  }
+
+  const ticks = [0];
+
+  for (
+    let value =
+      1_000_000_000;
+    value <= max;
+    value +=
+      1_000_000_000
+  ) {
+    ticks.push(value);
+  }
+
+  return ticks;
+}
+
+function ExpenseGroupChart({
   data = [],
   language = "mn"
 }) {
-  const currentLanguage =
-    language === "en"
-      ? "en"
-      : "mn";
-
-  const t =
-    translations[
-      currentLanguage
-    ];
-
   const safeData =
-    Array.isArray(
-      data
-    )
+    Array.isArray(data)
       ? data.map(
-          (
-            item
-          ) => ({
+          (item) => ({
             ...item,
 
-            revenue:
+            value:
               Number(
-                item.revenue ||
-                  0
-              ),
-
-            expense:
-              Number(
-                item.expense ||
-                  0
+                item.value || 0
               )
           })
         )
       : [];
 
-  const yAxisWidth =
-    170;
+  const axisMax =
+    getExpenseAxisMax(
+      safeData
+    );
 
-  const chartLeftMargin =
-    8;
+  const ticks =
+    getTicks(axisMax);
 
-  const chartRightMargin =
-    75;
+  const rowHeight = 36;
 
-  const rowHeight =
-    40;
-
-  const visibleHeight =
-    310;
+  const visibleHeight = 270;
 
   const chartHeight =
     Math.max(
       visibleHeight,
       safeData.length *
         rowHeight +
-        10
+        20
     );
+
+  const tooltipLabel =
+    language === "en"
+      ? "Amount"
+      : "Дүн";
+
+  return (
+    <div className="right-scroll-chart">
+      <div className="right-scroll-chart-scroll">
+        <div
+          className="right-scroll-chart-body"
+          style={{
+            height:
+              `${chartHeight}px`
+          }}
+        >
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+          >
+            <BarChart
+              data={safeData}
+              layout="vertical"
+              margin={{
+                top: 8,
+                right: 60,
+                bottom: 4,
+                left: 0
+              }}
+              barCategoryGap={12}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={false}
+                stroke="#edf1f7"
+              />
+
+              <XAxis
+                type="number"
+                domain={[
+                  0,
+                  axisMax
+                ]}
+                hide
+                allowDataOverflow
+              />
+
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={220}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+                tick={
+                  <RightSideYAxisTick />
+                }
+              />
+
+              <Tooltip
+                cursor={{
+                  fill:
+                    "rgba(15, 23, 42, 0.025)"
+                }}
+                formatter={(
+                  value
+                ) => [
+                  formatTooltip(
+                    value
+                  ),
+                  tooltipLabel
+                ]}
+              />
+
+              <Bar
+                dataKey="value"
+                fill="#2966e8"
+                barSize={15}
+                radius={[
+                  0,
+                  4,
+                  4,
+                  0
+                ]}
+                animationDuration={700}
+              >
+                <LabelList
+                  dataKey="value"
+                  content={
+                    <RightValueLabel />
+                  }
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="right-scroll-axis">
+        <div className="right-scroll-axis-track">
+          {ticks.map(
+            (tick) => (
+              <span
+                key={tick}
+                style={{
+                  left:
+                    `${
+                      (tick /
+                        axisMax) *
+                      100
+                    }%`
+                }}
+              >
+                {formatCompact(
+                  tick
+                )}
+              </span>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getBranchAxisMax(
+  data
+) {
+  const maxValue =
+    Math.max(
+      ...data.flatMap(
+        (item) => [
+          Math.abs(
+            Number(
+              item.revenue || 0
+            )
+          ),
+
+          Math.abs(
+            Number(
+              item.expense || 0
+            )
+          )
+        ]
+      ),
+      0
+    );
+
+  if (
+    maxValue <=
+    500_000_000
+  ) {
+    return 500_000_000;
+  }
+
+  if (
+    maxValue <=
+    1_000_000_000
+  ) {
+    return 1_000_000_000;
+  }
+
+  if (
+    maxValue <=
+    2_000_000_000
+  ) {
+    return 2_000_000_000;
+  }
+
+  if (
+    maxValue <=
+    3_000_000_000
+  ) {
+    return 3_000_000_000;
+  }
+
+  return (
+    Math.ceil(
+      maxValue /
+        1_000_000_000
+    ) *
+    1_000_000_000
+  );
+}
+
+function getBranchTicks(
+  max
+) {
+  return getTicks(max);
+}
+
+function BranchRevenueExpenseChart({
+  data = [],
+  language = "mn"
+}) {
+  const safeData =
+    Array.isArray(data)
+      ? data.map(
+          (item) => ({
+            ...item,
+
+            revenue:
+              Number(
+                item.revenue || 0
+              ),
+
+            expense:
+              Number(
+                item.expense || 0
+              )
+          })
+        )
+      : [];
+
+  const axisMax =
+    getBranchAxisMax(
+      safeData
+    );
+
+  const ticks =
+    getBranchTicks(
+      axisMax
+    );
+
+  const rowHeight = 36;
+
+  const visibleHeight = 250;
+
+  const chartHeight =
+    Math.max(
+      visibleHeight,
+      safeData.length *
+        rowHeight +
+        20
+    );
+
+  const expenseLabel =
+    language === "en"
+      ? "Expense"
+      : "Зардал";
+
+  const revenueLabel =
+    language === "en"
+      ? "Revenue"
+      : "Орлого";
 
   return (
     <div className="branch-re-chart">
@@ -400,13 +639,13 @@ function BranchRevenueExpenseChart({
         <span className="branch-re-legend-item">
           <span className="branch-re-legend-dot expense" />
 
-          {t.expense}
+          {expenseLabel}
         </span>
 
         <span className="branch-re-legend-item">
           <span className="branch-re-legend-dot revenue" />
 
-          {t.income}
+          {revenueLabel}
         </span>
       </div>
 
@@ -423,43 +662,28 @@ function BranchRevenueExpenseChart({
             height="100%"
           >
             <BarChart
-              data={
-                safeData
-              }
+              data={safeData}
               layout="vertical"
               margin={{
-                top:
-                  5,
-
-                right:
-                  chartRightMargin,
-
-                bottom:
-                  0,
-
-                left:
-                  chartLeftMargin
+                top: 8,
+                right: 35,
+                bottom: 4,
+                left: 0
               }}
-              barCategoryGap={
-                8
-              }
-              barGap={
-                3
-              }
+              barCategoryGap={10}
+              barGap={3}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                horizontal={
-                  false
-                }
+                horizontal={false}
                 stroke="#edf1f7"
               />
 
               <XAxis
                 type="number"
                 domain={[
-                  BRANCH_AXIS_MIN,
-                  BRANCH_AXIS_MAX
+                  0,
+                  axisMax
                 ]}
                 hide
                 allowDataOverflow
@@ -468,20 +692,12 @@ function BranchRevenueExpenseChart({
               <YAxis
                 type="category"
                 dataKey="name"
-                width={
-                  yAxisWidth
-                }
-                axisLine={
-                  false
-                }
-                tickLine={
-                  false
-                }
-                interval={
-                  0
-                }
+                width={200}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
                 tick={
-                  <CustomYAxisTick />
+                  <RightSideYAxisTick />
                 }
               />
 
@@ -503,92 +719,47 @@ function BranchRevenueExpenseChart({
 
               <Bar
                 dataKey="expense"
-                name={
-                  t.expense
-                }
+                name={expenseLabel}
                 fill="#2966e8"
-                barSize={
-                  10
-                }
+                barSize={10}
                 radius={[
                   0,
                   4,
                   4,
                   0
                 ]}
-                isAnimationActive={
-                  true
-                }
-                animationBegin={
-                  100
-                }
-                animationDuration={
-                  1000
-                }
-                animationEasing="ease-out"
+                animationDuration={700}
               />
 
               <Bar
                 dataKey="revenue"
-                name={
-                  t.income
-                }
+                name={revenueLabel}
                 fill="#43d77b"
-                barSize={
-                  10
-                }
+                barSize={10}
                 radius={[
                   0,
                   4,
                   4,
                   0
                 ]}
-                isAnimationActive={
-                  true
-                }
-                animationBegin={
-                  100
-                }
-                animationDuration={
-                  1000
-                }
-                animationEasing="ease-out"
+                animationDuration={700}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="shared-bottom-axis">
-        <div
-          className="shared-bottom-axis-track"
-          style={{
-            marginLeft:
-              `${
-                yAxisWidth +
-                chartLeftMargin
-              }px`,
-
-            marginRight:
-              `${chartRightMargin}px`
-          }}
-        >
-          {BRANCH_AXIS_TICKS.map(
-            (
-              tick
-            ) => (
+      <div className="branch-re-fixed-axis">
+        <div className="branch-re-fixed-axis-track">
+          {ticks.map(
+            (tick) => (
               <span
-                key={
-                  tick
-                }
-                className="shared-bottom-axis-tick"
+                key={tick}
                 style={{
                   left:
                     `${
-                      ((tick -
-                        BRANCH_AXIS_MIN) /
-                        (BRANCH_AXIS_MAX -
-                          BRANCH_AXIS_MIN)) *
+                      (tick /
+                        axisMax) *
                       100
                     }%`
                 }}
@@ -605,13 +776,83 @@ function BranchRevenueExpenseChart({
   );
 }
 
+const translations = {
+  mn: {
+    loading:
+      "Уншиж байна...",
+
+    backendError:
+      "Backend алдаа",
+
+    revenueAccount:
+      "Орлогын дүн дансаар",
+
+    expenseAccount:
+      "Зардлын дүн дансаар",
+
+    expenseGroup:
+      "Зардлын бүлгээр",
+
+    branch:
+      "Орлого Зардлын дүн салбараар",
+
+    revenue:
+      "Орлого",
+
+    expense:
+      "Зардал",
+
+    viewType:
+      "Харах төрөл",
+
+    amount:
+      "Дүн",
+
+    downloadExcel:
+      "Excel татах"
+  },
+
+  en: {
+    loading:
+      "Loading...",
+
+    backendError:
+      "Backend error",
+
+    revenueAccount:
+      "Revenue Amount by Account",
+
+    expenseAccount:
+      "Expense Amount by Account",
+
+    expenseGroup:
+      "Expense by Group",
+
+    branch:
+      "Revenue and Expense by Branch",
+
+    revenue:
+      "Revenue",
+
+    expense:
+      "Expense",
+
+    viewType:
+      "View type",
+
+    amount:
+      "Amount",
+
+    downloadExcel:
+      "Download Excel"
+  }
+};
+
 export default function RevenueExpense() {
   const {
-    selectedMonth,
-    selectedBranch,
+    filters,
     language
-  } =
-    useDashboard();
+  } = useDashboard();
 
   const currentLanguage =
     language === "en"
@@ -623,172 +864,139 @@ export default function RevenueExpense() {
       currentLanguage
     ];
 
-  const filters =
-    useMemo(
-      () =>
-        getDashboardFilters(
-          selectedMonth,
-          selectedBranch
-        ),
-      [
-        selectedMonth,
-        selectedBranch
-      ]
-    );
-
   const [
     revenueAccounts,
     setRevenueAccounts
-  ] = useState(
-    []
-  );
+  ] = useState([]);
 
   const [
     expenseGroups,
     setExpenseGroups
-  ] = useState(
-    []
-  );
+  ] = useState([]);
 
   const [
     branchRevenueExpense,
     setBranchRevenueExpense
-  ] = useState(
-    []
-  );
+  ] = useState([]);
 
   const [
     expenseAccounts,
     setExpenseAccounts
+  ] = useState([]);
+
+  const [
+    viewType,
+    setViewType
   ] = useState(
-    []
+    "revenue"
   );
 
   const [
     loading,
     setLoading
-  ] = useState(
-    true
-  );
+  ] = useState(true);
 
   const [
     error,
     setError
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
-  useEffect(
-    () => {
-      let mounted =
-        true;
+  useEffect(() => {
+    let mounted = true;
 
-      async function load() {
-        try {
-          setLoading(
-            true
-          );
+    async function load() {
+      try {
+        setLoading(true);
+        setError("");
 
-          setError(
-            ""
-          );
+        const [
+          revenueData,
+          groupsData,
+          branchData,
+          expenseData
+        ] =
+          await Promise.all([
+            getRevenueAccounts(
+              filters
+            ),
 
-          const [
-            revenueData,
-            groupsData,
-            branchData,
+            getExpenseGroups(
+              filters
+            ),
+
+            getBranchRevenueExpense(
+              filters
+            ),
+
+            getExpenseAccounts(
+              filters
+            )
+          ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        setRevenueAccounts(
+          Array.isArray(
+            revenueData
+          )
+            ? revenueData
+            : []
+        );
+
+        setExpenseGroups(
+          Array.isArray(
+            groupsData
+          )
+            ? groupsData
+            : []
+        );
+
+        setBranchRevenueExpense(
+          Array.isArray(
+            branchData
+          )
+            ? branchData
+            : []
+        );
+
+        setExpenseAccounts(
+          Array.isArray(
             expenseData
-          ] =
-            await Promise.all(
-              [
-                getRevenueAccounts(
-                  filters
-                ),
-
-                getExpenseGroups(
-                  filters
-                ),
-
-                getBranchRevenueExpense(
-                  filters
-                ),
-
-                getExpenseAccounts(
-                  filters
-                )
-              ]
-            );
-
-          if (
-            !mounted
-          ) {
-            return;
-          }
-
-          setRevenueAccounts(
-            Array.isArray(
-              revenueData
-            )
-              ? revenueData
-              : []
-          );
-
-          setExpenseGroups(
-            Array.isArray(
-              groupsData
-            )
-              ? groupsData
-              : []
-          );
-
-          setBranchRevenueExpense(
-            Array.isArray(
-              branchData
-            )
-              ? branchData
-              : []
-          );
-
-          setExpenseAccounts(
-            Array.isArray(
-              expenseData
-            )
-              ? expenseData
-              : []
-          );
-        } catch (
+          )
+            ? expenseData
+            : []
+        );
+      } catch (err) {
+        console.error(
+          "REVENUE EXPENSE ERROR:",
           err
-        ) {
-          if (
-            mounted
-          ) {
-            setError(
-              err?.message ||
-                "Data load failed"
-            );
-          }
-        } finally {
-          if (
-            mounted
-          ) {
-            setLoading(
-              false
-            );
-          }
+        );
+
+        if (mounted) {
+          setError(
+            err?.message ||
+              "Data load failed"
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(
+            false
+          );
         }
       }
+    }
 
-      load();
+    load();
 
-      return () => {
-        mounted =
-          false;
-      };
-    },
-    [
-      filters
-    ]
-  );
+    return () => {
+      mounted = false;
+    };
+  }, [
+    filters
+  ]);
 
   const revenueRows =
     useMemo(
@@ -801,14 +1009,13 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value ||
-                0
+              b.value || 0
             ) -
             Number(
-              a.value ||
-                0
+              a.value || 0
             )
         ),
+
       [
         revenueAccounts
       ]
@@ -825,14 +1032,13 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value ||
-                0
+              b.value || 0
             ) -
             Number(
-              a.value ||
-                0
+              a.value || 0
             )
         ),
+
       [
         expenseGroups
       ]
@@ -849,155 +1055,246 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value ||
-                0
+              b.value || 0
             ) -
             Number(
-              a.value ||
-                0
+              a.value || 0
             )
         ),
+
       [
         expenseAccounts
       ]
     );
 
-  if (
-    loading
-  ) {
+  if (loading) {
     return (
-      <div className="revenue-expense-page">
-        <div className="page-loading">
-          {t.loading}
-        </div>
+      <div className="page-loading">
+        {t.loading}
       </div>
     );
   }
 
-  if (
-    error
-  ) {
+  if (error) {
     return (
-      <div className="revenue-expense-page">
-        <div className="page-error">
-          {t.backendError}
-          :{" "}
-          {error}
-        </div>
+      <div className="page-error">
+        {t.backendError}:{" "}
+        {error}
       </div>
     );
   }
+
+  const combinedData =
+    viewType ===
+    "revenue"
+      ? revenueRows
+      : expenseAccountRows;
+
+  const combinedTitle =
+    viewType ===
+    "revenue"
+      ? t.revenueAccount
+      : t.expenseAccount;
+
+  const combinedColor =
+    viewType ===
+    "revenue"
+      ? "#43d77b"
+      : "#2966e8";
+
+  const combinedYAxisWidth =
+    viewType ===
+    "revenue"
+      ? 195
+      : 210;
 
   return (
-    <div className="revenue-expense-page">
-      <div className="revenue-expense-grid">
-        <Card
-          title={
-            t.incomeByAccount
-          }
-          className="revenue-expense-card"
-        >
-          <HorizontalBarChart
-            data={
-              revenueRows
-            }
-            yAxisWidth={
-              195
-            }
-            rowHeight={
-              40
-            }
-            barSize={
-              20
-            }
-            visibleHeight={
-              310
-            }
-            language={
-              currentLanguage
-            }
-            valueLabel={
-              t.amount
-            }
-          />
+    <div className="revenue-expense-layout">
+      <div className="revenue-expense-combined-column">
+        <Card>
+          <div className="revenue-expense-card-header">
+            <h3 className="revenue-expense-card-title">
+              {combinedTitle}
+            </h3>
+
+            <div className="chart-header-actions">
+              <div className="revenue-expense-view-selector">
+                <span className="revenue-expense-view-label">
+                  {t.viewType}
+                </span>
+
+                <select
+                  className="revenue-expense-view-select"
+                  value={viewType}
+                  onChange={(event) =>
+                    setViewType(
+                      event.target.value
+                    )
+                  }
+                >
+                  <option value="revenue">
+                    {t.revenue}
+                  </option>
+
+                  <option value="expense">
+                    {t.expense}
+                  </option>
+                </select>
+              </div>
+
+              <ExcelDownloadButton
+                title={t.downloadExcel}
+                onClick={() =>
+                  exportChartToExcel({
+                    data: combinedData,
+                    fileName: combinedTitle,
+
+                    sheetName:
+                      viewType === "revenue"
+                        ? "Revenue Accounts"
+                        : "Expense Accounts",
+
+                    nameHeader:
+                      currentLanguage === "en"
+                        ? "Account"
+                        : "Данс",
+
+                    valueHeader:
+                      currentLanguage === "en"
+                        ? "Amount"
+                        : "Дүн"
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="revenue-expense-combined-chart">
+            <HorizontalBarChart
+              data={
+                combinedData
+              }
+              color={
+                combinedColor
+              }
+              yAxisWidth={
+                combinedYAxisWidth
+              }
+              barSize={20}
+              language={
+                currentLanguage
+              }
+              valueLabel={
+                t.amount
+              }
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="revenue-expense-right-column">
+        <Card>
+          <div className="chart-card-custom-header">
+            <h3>
+              {t.expenseGroup}
+            </h3>
+
+            <ExcelDownloadButton
+              title={
+                t.downloadExcel
+              }
+              onClick={() =>
+                exportChartToExcel({
+                  data:
+                    expenseGroupRows,
+
+                  fileName:
+                    t.expenseGroup,
+
+                  sheetName:
+                    "Expense Groups",
+
+                  nameHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Expense Group"
+                      : "Зардлын бүлэг",
+
+                  valueHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Amount"
+                      : "Дүн"
+                })
+              }
+            />
+          </div>
+
+          <div className="revenue-expense-right-chart">
+            <ExpenseGroupChart
+              data={
+                expenseGroupRows
+              }
+              language={
+                currentLanguage
+              }
+            />
+          </div>
         </Card>
 
-        <Card
-          title={
-            t.expenseByCategory
-          }
-          className="revenue-expense-card"
-        >
-          <HorizontalBarChart
-            data={
-              expenseGroupRows
-            }
-            yAxisWidth={
-              210
-            }
-            rowHeight={
-              40
-            }
-            barSize={
-              20
-            }
-            visibleHeight={
-              310
-            }
-            language={
-              currentLanguage
-            }
-            valueLabel={
-              t.amount
-            }
-          />
-        </Card>
+        <Card>
+          <div className="chart-card-custom-header">
+            <h3>
+              {t.branch}
+            </h3>
 
-        <Card
-          title={
-            t.incomeExpenseByBranch
-          }
-          className="revenue-expense-card"
-        >
-          <BranchRevenueExpenseChart
-            data={
-              branchRevenueExpense
-            }
-            language={
-              currentLanguage
-            }
-          />
-        </Card>
+            <ExcelDownloadButton
+              title={
+                t.downloadExcel
+              }
+              onClick={() =>
+                exportRevenueExpenseToExcel({
+                  data:
+                    branchRevenueExpense,
 
-        <Card
-          title={
-            t.expenseByAccount
-          }
-          className="revenue-expense-card"
-        >
-          <HorizontalBarChart
-            data={
-              expenseAccountRows
-            }
-            yAxisWidth={
-              210
-            }
-            rowHeight={
-              40
-            }
-            barSize={
-              20
-            }
-            visibleHeight={
-              310
-            }
-            language={
-              currentLanguage
-            }
-            valueLabel={
-              t.amount
-            }
-          />
+                  fileName:
+                    t.branch,
+
+                  sheetName:
+                    "Branches",
+
+                  nameHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Branch"
+                      : "Салбар",
+
+                  expenseHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Expense"
+                      : "Зардал",
+
+                  revenueHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Revenue"
+                      : "Орлого"
+                })
+              }
+            />
+          </div>
+
+          <div className="revenue-expense-right-chart">
+            <BranchRevenueExpenseChart
+              data={
+                branchRevenueExpense
+              }
+              language={
+                currentLanguage
+              }
+            />
+          </div>
         </Card>
       </div>
     </div>

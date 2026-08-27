@@ -5,11 +5,11 @@ import pool from "../db.js";
 
 import {
   requireAuth,
-  requireAdmin
+  requireAdmin,
+  requirePasswordChanged
 } from "../middleware/auth.js";
 
-const router =
-  express.Router();
+const router = express.Router();
 
 const MAX_ADMINS = 2;
 
@@ -19,107 +19,36 @@ const PASSWORD_MESSAGE =
 function isStrongPassword(
   password
 ) {
-  const value =
-    String(
-      password || ""
-    );
+  const value = String(
+    password || ""
+  );
 
   return (
     value.length >= 10 &&
-    /[A-Z]/.test(
-      value
-    ) &&
-    /[a-z]/.test(
-      value
-    ) &&
-    /\d/.test(
-      value
-    ) &&
-    /[^A-Za-z0-9\s]/.test(
-      value
-    )
+    /\p{Lu}/u.test(value) &&
+    /\p{Ll}/u.test(value) &&
+    /\d/.test(value) &&
+    /[^\p{L}\d\s]/u.test(value)
   );
 }
 
-async function getActiveAdminCount(
-  db = pool,
-  excludeUserId = null
-) {
-  if (
-    excludeUserId !== null &&
-    excludeUserId !== undefined
-  ) {
-    const result =
-      await db.query(
-        `
-        SELECT
-          COUNT(*)::int AS count
-        FROM public.dashboard_users
-        WHERE
-          role = 'admin'
-          AND is_active = true
-          AND id <> $1
-        `,
-        [
-          Number(
-            excludeUserId
-          )
-        ]
-      );
-
-    return Number(
-      result.rows[0]
-        ?.count || 0
-    );
-  }
-
-  const result =
-    await db.query(
-      `
-      SELECT
-        COUNT(*)::int AS count
-      FROM public.dashboard_users
-      WHERE
-        role = 'admin'
-        AND is_active = true
-      `
-    );
-
-  return Number(
-    result.rows[0]
-      ?.count || 0
-  );
-}
-
-function normalizeUser(
-  row
-) {
+function normalizeUser(row) {
   return {
-    id:
-      Number(
-        row.id
-      ),
+    id: Number(row.id),
 
     display_id:
-      row.display_id !==
-        undefined &&
-      row.display_id !==
-        null
-        ? Number(
-            row.display_id
-          )
+      row.display_id !== undefined &&
+      row.display_id !== null
+        ? Number(row.display_id)
         : null,
 
-    email:
-      row.email,
+    email: row.email,
 
-    role:
-      String(
-        row.role ||
-          "viewer"
-      )
-        .trim()
-        .toLowerCase(),
+    role: String(
+      row.role || "viewer"
+    )
+      .trim()
+      .toLowerCase(),
 
     must_change_password:
       Boolean(
@@ -154,8 +83,56 @@ function normalizeUser(
   };
 }
 
+async function getAdminCount(
+  db,
+  excludeId = null
+) {
+  if (
+    excludeId !== null
+  ) {
+    const result =
+      await db.query(
+        `
+        SELECT
+          COUNT(*)::int AS count
+        FROM public.dashboard_users
+        WHERE
+          LOWER(TRIM(role)) = 'admin'
+          AND is_active = true
+          AND id <> $1
+        `,
+        [
+          Number(excludeId)
+        ]
+      );
+
+    return Number(
+      result.rows[0]?.count ||
+        0
+    );
+  }
+
+  const result =
+    await db.query(
+      `
+      SELECT
+        COUNT(*)::int AS count
+      FROM public.dashboard_users
+      WHERE
+        LOWER(TRIM(role)) = 'admin'
+        AND is_active = true
+      `
+    );
+
+  return Number(
+    result.rows[0]?.count ||
+      0
+  );
+}
+
 router.use(
   requireAuth,
+  requirePasswordChanged,
   requireAdmin
 );
 
@@ -197,9 +174,7 @@ router.get(
 
       return res.json({
         success: true,
-
-        max_admins:
-          MAX_ADMINS,
+        max_admins: MAX_ADMINS,
 
         users:
           result.rows.map(
@@ -212,13 +187,11 @@ router.get(
         error
       );
 
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Internal server error"
-        });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     }
   }
 );
@@ -259,26 +232,22 @@ router.post(
         !email ||
         !password
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "И-мэйл болон түр нууц үг шаардлагатай"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "И-мэйл болон түр нууц үг шаардлагатай"
+        });
       }
 
       if (
         role !== "admin" &&
         role !== "viewer"
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Буруу хэрэглэгчийн эрх байна"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Буруу хэрэглэгчийн эрх байна"
+        });
       }
 
       if (
@@ -286,15 +255,12 @@ router.post(
           password
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            code:
-              "WEAK_PASSWORD",
-            message:
-              PASSWORD_MESSAGE
-          });
+        return res.status(400).json({
+          success: false,
+          code: "WEAK_PASSWORD",
+          message:
+            PASSWORD_MESSAGE
+        });
       }
 
       await client.query(
@@ -308,59 +274,49 @@ router.post(
       const existing =
         await client.query(
           `
-          SELECT
-            id
+          SELECT id
           FROM public.dashboard_users
           WHERE LOWER(email) = $1
           LIMIT 1
           `,
-          [
-            email
-          ]
+          [email]
         );
 
       if (
-        existing.rows
-          .length > 0
+        existing.rows.length >
+        0
       ) {
         await client.query(
           "ROLLBACK"
         );
 
-        return res
-          .status(409)
-          .json({
-            success: false,
-            message:
-              "Энэ и-мэйл бүртгэлтэй байна"
-          });
+        return res.status(409).json({
+          success: false,
+          message:
+            "Энэ и-мэйл бүртгэлтэй байна"
+        });
       }
 
-      if (
-        role === "admin"
-      ) {
-        const adminCount =
-          await getActiveAdminCount(
+      if (role === "admin") {
+        const count =
+          await getAdminCount(
             client
           );
 
         if (
-          adminCount >=
-          MAX_ADMINS
+          count >= MAX_ADMINS
         ) {
           await client.query(
             "ROLLBACK"
           );
 
-          return res
-            .status(400)
-            .json({
-              success: false,
-              code:
-                "ADMIN_LIMIT_REACHED",
-              message:
-                "Админ хэрэглэгчийн тоо ихдээ 2 байна"
-            });
+          return res.status(400).json({
+            success: false,
+            code:
+              "ADMIN_LIMIT_REACHED",
+            message:
+              "Админ хэрэглэгчийн тоо ихдээ 2 байна"
+          });
         }
       }
 
@@ -373,7 +329,8 @@ router.post(
       const result =
         await client.query(
           `
-          INSERT INTO public.dashboard_users (
+          INSERT INTO public.dashboard_users
+          (
             email,
             password_hash,
             role,
@@ -387,7 +344,8 @@ router.post(
             created_at,
             updated_at
           )
-          VALUES (
+          VALUES
+          (
             $1,
             $2,
             $3,
@@ -424,15 +382,14 @@ router.post(
         "COMMIT"
       );
 
-      return res
-        .status(201)
-        .json({
-          success: true,
-          user:
-            normalizeUser(
-              result.rows[0]
-            )
-        });
+      return res.status(201).json({
+        success: true,
+
+        user:
+          normalizeUser(
+            result.rows[0]
+          )
+      });
     } catch (error) {
       try {
         await client.query(
@@ -446,25 +403,21 @@ router.post(
       );
 
       if (
-        error.code ===
+        error?.code ===
         "23505"
       ) {
-        return res
-          .status(409)
-          .json({
-            success: false,
-            message:
-              "Энэ и-мэйл бүртгэлтэй байна"
-          });
-      }
-
-      return res
-        .status(500)
-        .json({
+        return res.status(409).json({
           success: false,
           message:
-            "Internal server error"
+            "Энэ и-мэйл бүртгэлтэй байна"
         });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     } finally {
       client.release();
     }
@@ -473,7 +426,10 @@ router.post(
 
 router.patch(
   "/:id",
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     const client =
       await pool.connect();
 
@@ -488,54 +444,54 @@ router.patch(
           userId
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid user id"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid user id"
+        });
       }
 
-      const targetResult =
+      await client.query(
+        "BEGIN"
+      );
+
+      await client.query(
+        "SELECT pg_advisory_xact_lock(843210)"
+      );
+
+      const currentResult =
         await client.query(
           `
           SELECT
             id,
-            email,
             role,
             is_active,
-            is_blocked,
-            must_change_password,
-            failed_login_attempts,
-            blocked_at,
-            token_version,
-            created_at,
-            updated_at
+            token_version
           FROM public.dashboard_users
           WHERE id = $1
           LIMIT 1
+          FOR UPDATE
           `,
-          [
-            userId
-          ]
+          [userId]
         );
 
       if (
-        targetResult.rows
-          .length === 0
+        currentResult.rows.length ===
+        0
       ) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              "User not found"
-          });
+        await client.query(
+          "ROLLBACK"
+        );
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "User not found"
+        });
       }
 
       const current =
-        targetResult.rows[0];
+        currentResult.rows[0];
 
       const currentRole =
         String(
@@ -565,86 +521,104 @@ router.patch(
             .toLowerCase();
 
         if (
-          ![
-            "admin",
-            "viewer"
-          ].includes(
-            nextRole
-          )
-        ) {
-          return res
-            .status(400)
-            .json({
-              success: false,
-              message:
-                "Invalid role"
-            });
-        }
-      }
-
-      if (
-        req.body
-          .is_active !==
-        undefined
-      ) {
-        nextActive =
-          Boolean(
-            req.body
-              .is_active
-          );
-      }
-
-      await client.query(
-        "BEGIN"
-      );
-
-      await client.query(
-        "SELECT pg_advisory_xact_lock(843210)"
-      );
-
-      if (
-        currentRole !==
-          "admin" &&
-        nextRole ===
-          "admin"
-      ) {
-        const adminResult =
-          await client.query(
-            `
-            SELECT
-              COUNT(*)::int AS count
-            FROM public.dashboard_users
-            WHERE
-              role = 'admin'
-              AND is_active = true
-            `
-          );
-
-        const adminCount =
-          Number(
-            adminResult.rows[0]
-              ?.count || 0
-          );
-
-        if (
-          adminCount >=
-          MAX_ADMINS
+          nextRole !== "admin" &&
+          nextRole !== "viewer"
         ) {
           await client.query(
             "ROLLBACK"
           );
 
-          return res
-            .status(400)
-            .json({
-              success: false,
-              code:
-                "ADMIN_LIMIT_REACHED",
-              message:
-                "Админ хэрэглэгчийн тоо ихдээ 2 байна"
-            });
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid role"
+          });
         }
       }
+
+      if (
+        req.body.is_active !==
+        undefined
+      ) {
+        nextActive =
+          req.body.is_active ===
+            true ||
+          req.body.is_active ===
+            "true";
+      }
+
+      if (
+        userId ===
+          Number(
+            req.user.id
+          ) &&
+        (
+          nextRole !==
+            "admin" ||
+          !nextActive
+        )
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        return res.status(400).json({
+          success: false,
+          code:
+            "SELF_ADMIN_CHANGE_FORBIDDEN",
+          message:
+            "Өөрийн админ эрхийг хасах эсвэл өөрийгөө идэвхгүй болгох боломжгүй"
+        });
+      }
+
+      if (
+        currentRole !==
+          "admin" &&
+        nextRole ===
+          "admin" &&
+        nextActive
+      ) {
+        const count =
+          await getAdminCount(
+            client,
+            userId
+          );
+
+        if (
+          count >= MAX_ADMINS
+        ) {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          return res.status(400).json({
+            success: false,
+            code:
+              "ADMIN_LIMIT_REACHED",
+            message:
+              "Админ хэрэглэгчийн тоо ихдээ 2 байна"
+          });
+        }
+      }
+
+      const securityChanged =
+        currentRole !==
+          nextRole ||
+        Boolean(
+          current.is_active
+        ) !==
+          nextActive;
+
+      const tokenVersion =
+        Number(
+          current.token_version ||
+            0
+        ) +
+        (
+          securityChanged
+            ? 1
+            : 0
+        );
 
       const result =
         await client.query(
@@ -653,23 +627,9 @@ router.patch(
           SET
             role = $1,
             is_active = $2,
-            token_version =
-              CASE
-                WHEN role IS DISTINCT FROM $1
-                  OR is_active IS DISTINCT FROM $2
-                THEN
-                  COALESCE(
-                    token_version,
-                    0
-                  ) + 1
-                ELSE
-                  COALESCE(
-                    token_version,
-                    0
-                  )
-              END,
+            token_version = $3,
             updated_at = NOW()
-          WHERE id = $3
+          WHERE id = $4
           RETURNING
             id,
             email,
@@ -679,13 +639,13 @@ router.patch(
             is_blocked,
             failed_login_attempts,
             blocked_at,
-            token_version,
             created_at,
             updated_at
           `,
           [
             nextRole,
             nextActive,
+            tokenVersion,
             userId
           ]
         );
@@ -696,6 +656,10 @@ router.patch(
 
       return res.json({
         success: true,
+
+        message:
+          "Хэрэглэгчийн эрх амжилттай шинэчлэгдлээ",
+
         user:
           normalizeUser(
             result.rows[0]
@@ -713,13 +677,11 @@ router.patch(
         error
       );
 
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Internal server error"
-        });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     } finally {
       client.release();
     }
@@ -752,23 +714,19 @@ router.post(
           userId
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid user id"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid user id"
+        });
       }
 
       if (!password) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Шинэ нууц үг оруулна уу"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Шинэ нууц үг оруулна уу"
+        });
       }
 
       if (
@@ -776,15 +734,12 @@ router.post(
           password
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            code:
-              "WEAK_PASSWORD",
-            message:
-              PASSWORD_MESSAGE
-          });
+        return res.status(400).json({
+          success: false,
+          code: "WEAK_PASSWORD",
+          message:
+            PASSWORD_MESSAGE
+        });
       }
 
       await client.query(
@@ -797,36 +752,55 @@ router.post(
           SELECT
             id,
             email,
-            role,
-            is_blocked
+            role
           FROM public.dashboard_users
           WHERE id = $1
           LIMIT 1
           FOR UPDATE
           `,
-          [
-            userId
-          ]
+          [userId]
         );
 
       if (
-        targetResult.rows
-          .length === 0
+        targetResult.rows.length ===
+        0
       ) {
         await client.query(
           "ROLLBACK"
         );
 
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              "User not found"
-          });
+        return res.status(404).json({
+          success: false,
+          message:
+            "User not found"
+        });
       }
 
-      const passwordHash =
+      const target =
+        targetResult.rows[0];
+
+      if (
+        String(
+          target.role || ""
+        )
+          .trim()
+          .toLowerCase() ===
+        "admin"
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        return res.status(403).json({
+          success: false,
+          code:
+            "ADMIN_RECOVERY_RESTRICTED",
+          message:
+            "Админ хэрэглэгчийг Users API-аар unblock хийх боломжгүй"
+        });
+      }
+
+      const hash =
         await bcrypt.hash(
           password,
           12
@@ -838,18 +812,22 @@ router.post(
           UPDATE public.dashboard_users
           SET
             password_hash = $1,
-            must_change_password = false,
+            must_change_password = true,
             is_blocked = false,
             failed_login_attempts = 0,
             blocked_at = NULL,
             is_active = true,
+
             token_version =
               COALESCE(
                 token_version,
                 0
               ) + 1,
+
             updated_at = NOW()
+
           WHERE id = $2
+
           RETURNING
             id,
             email,
@@ -863,7 +841,7 @@ router.post(
             updated_at
           `,
           [
-            passwordHash,
+            hash,
             userId
           ]
         );
@@ -874,8 +852,10 @@ router.post(
 
       return res.json({
         success: true,
+
         message:
           "Хэрэглэгчийн блок амжилттай гарлаа",
+
         user:
           normalizeUser(
             result.rows[0]
@@ -893,13 +873,11 @@ router.post(
         error
       );
 
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Internal server error"
-        });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     } finally {
       client.release();
     }
@@ -929,13 +907,55 @@ router.post(
           userId
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid user id"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid user id"
+        });
+      }
+
+      const targetResult =
+        await pool.query(
+          `
+          SELECT
+            id,
+            role
+          FROM public.dashboard_users
+          WHERE id = $1
+          LIMIT 1
+          `,
+          [userId]
+        );
+
+      if (
+        targetResult.rows.length ===
+        0
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "User not found"
+        });
+      }
+
+      const target =
+        targetResult.rows[0];
+
+      if (
+        String(
+          target.role || ""
+        )
+          .trim()
+          .toLowerCase() ===
+        "admin"
+      ) {
+        return res.status(403).json({
+          success: false,
+          code:
+            "ADMIN_PASSWORD_RESET_FORBIDDEN",
+          message:
+            "Админ хэрэглэгчийн нууц үгийг Users API-аар шинэчлэх боломжгүй"
+        });
       }
 
       if (
@@ -943,18 +963,15 @@ router.post(
           password
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            code:
-              "WEAK_PASSWORD",
-            message:
-              PASSWORD_MESSAGE
-          });
+        return res.status(400).json({
+          success: false,
+          code: "WEAK_PASSWORD",
+          message:
+            PASSWORD_MESSAGE
+        });
       }
 
-      const passwordHash =
+      const hash =
         await bcrypt.hash(
           password,
           12
@@ -970,13 +987,17 @@ router.post(
             failed_login_attempts = 0,
             is_blocked = false,
             blocked_at = NULL,
+
             token_version =
               COALESCE(
                 token_version,
                 0
               ) + 1,
+
             updated_at = NOW()
+
           WHERE id = $2
+
           RETURNING
             id,
             email,
@@ -990,26 +1011,14 @@ router.post(
             updated_at
           `,
           [
-            passwordHash,
+            hash,
             userId
           ]
         );
 
-      if (
-        result.rows.length ===
-        0
-      ) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              "User not found"
-          });
-      }
-
       return res.json({
         success: true,
+
         user:
           normalizeUser(
             result.rows[0]
@@ -1021,13 +1030,11 @@ router.post(
         error
       );
 
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Internal server error"
-        });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     }
   }
 );
@@ -1052,13 +1059,11 @@ router.delete(
           userId
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid user id"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid user id"
+        });
       }
 
       if (
@@ -1067,20 +1072,18 @@ router.delete(
           req.user.id
         )
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Өөрийн хэрэглэгчийг устгах боломжгүй"
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "Өөрийн хэрэглэгчийг устгах боломжгүй"
+        });
       }
 
       await client.query(
         "BEGIN"
       );
 
-      const userResult =
+      const targetResult =
         await client.query(
           `
           SELECT
@@ -1092,77 +1095,65 @@ router.delete(
           LIMIT 1
           FOR UPDATE
           `,
-          [
-            userId
-          ]
+          [userId]
         );
 
       if (
-        userResult.rows
-          .length === 0
+        targetResult.rows.length ===
+        0
       ) {
         await client.query(
           "ROLLBACK"
         );
 
-        return res
-          .status(404)
-          .json({
+        return res.status(404).json({
+          success: false,
+          message:
+            "User not found"
+        });
+      }
+
+      const target =
+        targetResult.rows[0];
+
+      if (
+        String(
+          target.role || ""
+        )
+          .trim()
+          .toLowerCase() ===
+        "admin"
+      ) {
+        const remainingAdmins =
+          await getAdminCount(
+            client,
+            userId
+          );
+
+        if (
+          remainingAdmins < 1
+        ) {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          return res.status(400).json({
             success: false,
+            code:
+              "LAST_ADMIN_DELETE_FORBIDDEN",
             message:
-              "User not found"
+              "Сүүлийн админ хэрэглэгчийг устгах боломжгүй"
           });
+        }
       }
 
-      const deletingUser =
-        userResult.rows[0];
-
-      const deleteResult =
-        await client.query(
-          `
-          DELETE FROM public.dashboard_users
-          WHERE id = $1
-          RETURNING
-            id,
-            email,
-            role
-          `,
-          [
-            userId
-          ]
-        );
-
-      if (
-        deleteResult.rows
-          .length === 0
-      ) {
-        throw new Error(
-          "User delete failed"
-        );
-      }
-
-      const verifyResult =
-        await client.query(
-          `
-          SELECT
-            id
-          FROM public.dashboard_users
-          WHERE id = $1
-          LIMIT 1
-          `,
-          [
-            userId
-          ]
-        );
-
-      if (
-        verifyResult.rows
-          .length !== 0
-      ) {
-        throw new Error(
-          "User still exists after DELETE"
-        );
-      }
+      await client.query(
+        `
+        DELETE FROM public.dashboard_users
+        WHERE id = $1
+        `,
+        [userId]
+      );
 
       await client.query(
         "COMMIT"
@@ -1170,19 +1161,15 @@ router.delete(
 
       return res.json({
         success: true,
-        permanently_deleted:
-          true,
+        permanently_deleted: true,
+
         message:
           "Хэрэглэгч бүрэн устгагдлаа",
+
         deleted_user: {
-          id:
-            Number(
-              deletingUser.id
-            ),
-          email:
-            deletingUser.email,
-          role:
-            deletingUser.role
+          id: Number(target.id),
+          email: target.email,
+          role: target.role
         }
       });
     } catch (error) {
@@ -1193,32 +1180,27 @@ router.delete(
       } catch {}
 
       console.error(
-        "PERMANENT DELETE USER ERROR:",
+        "DELETE USER ERROR:",
         error
       );
 
       if (
-        error?.code ===
-        "23503"
+        error?.code === "23503"
       ) {
-        return res
-          .status(409)
-          .json({
-            success: false,
-            code:
-              "USER_HAS_REFERENCES",
-            message:
-              "Энэ хэрэглэгчтэй холбоотой мэдээлэл байгаа тул бүрэн устгах боломжгүй байна"
-          });
+        return res.status(409).json({
+          success: false,
+          code:
+            "USER_HAS_REFERENCES",
+          message:
+            "Энэ хэрэглэгчтэй холбоотой мэдээлэл байгаа тул бүрэн устгах боломжгүй байна"
+        });
       }
 
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Хэрэглэгчийг бүрэн устгахад алдаа гарлаа"
-        });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Internal server error"
+      });
     } finally {
       client.release();
     }

@@ -20,6 +20,7 @@ import {
 import Card from "../components/Card";
 import KpiCard from "../components/KpiCard";
 import AgingDonut from "../components/AgingDonut";
+import ExcelDownloadButton from "../components/ExcelDownloadButton";
 import {
   getAreaStats,
   getCollectionRate,
@@ -40,6 +41,10 @@ import {
   formatMonth,
   formatTooltipMoney
 } from "../utils/formatters";
+import {
+  exportChartToExcel,
+  exportIncomeExpenseProfitToExcel
+} from "../utils/exportExcel";
 
 const translations = {
   mn: {
@@ -98,7 +103,10 @@ const translations = {
       "Ашиг",
 
     days:
-      "хоног"
+      "хоног",
+
+    downloadExcel:
+      "Excel татах"
   },
 
   en: {
@@ -157,7 +165,10 @@ const translations = {
       "Profit",
 
     days:
-      "days"
+      "days",
+
+    downloadExcel:
+      "Download Excel"
   }
 };
 
@@ -1437,11 +1448,48 @@ export default function Dashboard() {
 
       <div className="dashboard-summary-row">
         <Card
-          title={
-            t.collectionRate
-          }
           className="collection-card dashboard-summary-collection"
         >
+          <div className="chart-card-custom-header">
+            <h3>
+              {t.collectionRate}
+            </h3>
+
+            <ExcelDownloadButton
+              title={
+                t.downloadExcel
+              }
+              onClick={() =>
+                exportChartToExcel({
+                  data:
+                    collectionMonthly,
+
+                  fileName:
+                    t.collectionRate,
+
+                  sheetName:
+                    currentLanguage ===
+                    "en"
+                      ? "Collection Rate"
+                      : "Авлага цуглуулалт",
+
+                  nameHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Month"
+                      : "Сар",
+
+                  valueHeader:
+                    currentLanguage ===
+                    "en"
+                      ? "Collection Rate"
+                      : "Цуглуулалтын хувь"
+                })
+              }
+            />
+
+          </div>
+
           <CollectionChart
             data={
               collectionMonthly
@@ -1534,17 +1582,44 @@ export default function Dashboard() {
               translatedReceivableAging
             }
             previous=""
+            title={
+              t.receivablesAging
+            }
+            language={
+              currentLanguage
+            }
           />
         </Card>
       </div>
 
       <div className="dashboard-bottom-row">
         <Card
-          title={
-            t.financialMonthly
-          }
           className="financial-card"
         >
+          <div className="chart-card-custom-header">
+            <h3>
+              {t.financialMonthly}
+            </h3>
+
+            <ExcelDownloadButton
+              title={
+                t.downloadExcel
+              }
+              onClick={() =>
+                exportIncomeExpenseProfitToExcel({
+                  data:
+                    incomeExpenseMonthly,
+
+                  fileName:
+                    t.financialMonthly,
+
+                  language:
+                    currentLanguage
+                })
+              }
+            />
+          </div>
+
           <FinancialChart
             data={
               incomeExpenseMonthly
@@ -1612,6 +1687,12 @@ export default function Dashboard() {
               translatedPayableAging
             }
             previous=""
+            title={
+              t.payablesAging
+            }
+            language={
+              currentLanguage
+            }
           />
         </Card>
       </div>

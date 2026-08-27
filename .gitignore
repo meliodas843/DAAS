@@ -1,7 +1,14 @@
 node_modules/
 dist/
+uploads/
+
 .env
 .env.*
 !.env.example
+
 .DS_Store
 *.log
+
+coverage/
+.vscode/
+.idea/
