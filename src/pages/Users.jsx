@@ -93,8 +93,6 @@ export default function Users() {
             "ROLE",
           password:
             "PASSWORD",
-          status:
-            "STATUS",
           login:
             "LOGIN",
           created:
@@ -200,8 +198,6 @@ export default function Users() {
             "ЭРХ",
           password:
             "НУУЦ ҮГ",
-          status:
-            "ТӨЛӨВ",
           login:
             "LOGIN",
           created:
@@ -1200,10 +1196,6 @@ export default function Users() {
                   </th>
 
                   <th>
-                    {t.status}
-                  </th>
-
-                  <th>
                     {t.login}
                   </th>
 
@@ -1345,36 +1337,6 @@ export default function Users() {
                               ? t.needsUpdate
                               : t.updated}
                           </span>
-                        </td>
-
-                        <td>
-                          <button
-                            type="button"
-                            className={`users-status-button ${
-                              item.is_active
-                                ? "active"
-                                : "inactive"
-                            }`}
-                            disabled={
-                              isCurrentUser ||
-                              busy
-                            }
-                            onClick={() =>
-                              updateUser(
-                                item,
-                                {
-                                  is_active:
-                                    !item.is_active
-                                }
-                              )
-                            }
-                          >
-                            <span />
-
-                            {item.is_active
-                              ? t.active
-                              : t.inactive}
-                          </button>
                         </td>
 
                         <td>
