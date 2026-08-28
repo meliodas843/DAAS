@@ -12,119 +12,8 @@ const router = express.Router();
 
 const MAX_FAILED_ATTEMPTS = 5;
 
-const LOGIN_WINDOW_MS =
-  15 * 60 * 1000;
-
-const LOGIN_MAX_REQUESTS = 10;
-
-const loginAttempts = new Map();
-
 const PASSWORD_MESSAGE =
   "Нууц үг хамгийн багадаа 10 тэмдэгт, том үсэг, жижиг үсэг, тоо болон тусгай тэмдэг агуулсан байна";
-
-function getClientKey(req) {
-  return String(
-    req.ip ||
-      req.socket?.remoteAddress ||
-      "unknown"
-  );
-}
-
-function clearExpiredRateLimits() {
-  const now = Date.now();
-
-  for (
-    const [
-      key,
-      value
-    ] of loginAttempts.entries()
-  ) {
-    if (
-      now - value.startedAt >=
-      LOGIN_WINDOW_MS
-    ) {
-      loginAttempts.delete(key);
-    }
-  }
-}
-
-setInterval(
-  clearExpiredRateLimits,
-  LOGIN_WINDOW_MS
-).unref();
-
-function loginLimiter(
-  req,
-  res,
-  next
-) {
-  const now = Date.now();
-
-  const key =
-    getClientKey(req);
-
-  const current =
-    loginAttempts.get(key);
-
-  if (
-    !current ||
-    now - current.startedAt >=
-      LOGIN_WINDOW_MS
-  ) {
-    loginAttempts.set(
-      key,
-      {
-        count: 1,
-        startedAt: now
-      }
-    );
-
-    return next();
-  }
-
-  if (
-    current.count >=
-    LOGIN_MAX_REQUESTS
-  ) {
-    const remaining =
-      LOGIN_WINDOW_MS -
-      (
-        now -
-        current.startedAt
-      );
-
-    const retryAfterSeconds =
-      Math.max(
-        1,
-        Math.ceil(
-          remaining / 1000
-        )
-      );
-
-    res.setHeader(
-      "Retry-After",
-      String(
-        retryAfterSeconds
-      )
-    );
-
-    return res.status(429).json({
-      success: false,
-      code: "TOO_MANY_REQUESTS",
-      message:
-        "Хэт олон нэвтрэх оролдлого хийлээ. Түр хүлээгээд дахин оролдоно уу."
-    });
-  }
-
-  current.count += 1;
-
-  loginAttempts.set(
-    key,
-    current
-  );
-
-  return next();
-}
 
 function isStrongPassword(
   password
@@ -179,14 +68,21 @@ function normalizeUser(
   };
 }
 
-function createToken(user) {
+function createToken(
+  user
+) {
   return jwt.sign(
     {
-      id: Number(user.id),
+      id:
+        Number(
+          user.id
+        ),
 
-      token_version: Number(
-        user.token_version || 0
-      )
+      token_version:
+        Number(
+          user.token_version ||
+            0
+        )
     },
 
     process.env.JWT_SECRET,
@@ -201,63 +97,74 @@ function createToken(user) {
 
 router.post(
   "/auth/login",
-  loginLimiter,
   async (
     req,
     res
   ) => {
     try {
-      const email = String(
-        req.body.email || ""
-      )
-        .trim()
-        .toLowerCase();
+      const email =
+        String(
+          req.body.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
 
-      const password = String(
-        req.body.password || ""
-      );
+      const password =
+        String(
+          req.body.password ||
+            ""
+        );
 
       if (
         !email ||
         !password
       ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "И-мэйл болон нууц үгээ оруулна уу"
-        });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "И-мэйл болон нууц үгээ оруулна уу"
+          });
       }
 
       const result =
         await pool.query(
           `
-          SELECT
-            id,
-            email,
-            password_hash,
-            role,
-            must_change_password,
-            is_active,
-            is_blocked,
-            failed_login_attempts,
-            blocked_at,
-            token_version
-          FROM public.dashboard_users
-          WHERE LOWER(email) = $1
-          LIMIT 1
+            SELECT
+              id,
+              email,
+              password_hash,
+              role,
+              must_change_password,
+              is_active,
+              is_blocked,
+              failed_login_attempts,
+              blocked_at,
+              token_version
+            FROM public.dashboard_users
+            WHERE LOWER(email) = $1
+            LIMIT 1
           `,
-          [email]
+          [
+            email
+          ]
         );
 
       if (
-        result.rows.length === 0
+        result.rows.length ===
+        0
       ) {
-        return res.status(401).json({
-          success: false,
-          code: "INVALID_CREDENTIALS",
-          message:
-            "И-мэйл эсвэл нууц үг буруу байна"
-        });
+        return res
+          .status(401)
+          .json({
+            success: false,
+            code:
+              "INVALID_CREDENTIALS",
+            message:
+              "И-мэйл эсвэл нууц үг буруу байна"
+          });
       }
 
       const user =
@@ -268,12 +175,15 @@ router.post(
           user.is_active
         )
       ) {
-        return res.status(401).json({
-          success: false,
-          code: "ACCOUNT_DISABLED",
-          message:
-            "Хэрэглэгч идэвхгүй байна"
-        });
+        return res
+          .status(401)
+          .json({
+            success: false,
+            code:
+              "ACCOUNT_DISABLED",
+            message:
+              "Хэрэглэгч идэвхгүй байна"
+          });
       }
 
       if (
@@ -281,12 +191,15 @@ router.post(
           user.is_blocked
         )
       ) {
-        return res.status(423).json({
-          success: false,
-          code: "ACCOUNT_BLOCKED",
-          message:
-            "Хэрэглэгч блоклогдсон байна"
-        });
+        return res
+          .status(423)
+          .json({
+            success: false,
+            code:
+              "ACCOUNT_BLOCKED",
+            message:
+              "Хэрэглэгч блоклогдсон байна"
+          });
       }
 
       const validPassword =
@@ -295,7 +208,9 @@ router.post(
           user.password_hash
         );
 
-      if (!validPassword) {
+      if (
+        !validPassword
+      ) {
         const failedAttempts =
           Number(
             user.failed_login_attempts ||
@@ -308,103 +223,117 @@ router.post(
 
         await pool.query(
           `
-          UPDATE public.dashboard_users
-          SET
-            failed_login_attempts = $1,
+            UPDATE public.dashboard_users
+            SET
+              failed_login_attempts = $1,
 
-            is_blocked = $2,
+              is_blocked = $2,
 
-            blocked_at =
-              CASE
-                WHEN $2 = true
-                THEN NOW()
-                ELSE blocked_at
-              END,
+              blocked_at =
+                CASE
+                  WHEN $2 = true
+                  THEN NOW()
+                  ELSE blocked_at
+                END,
 
-            token_version =
-              CASE
-                WHEN $2 = true
-                THEN
-                  COALESCE(
-                    token_version,
-                    0
-                  ) + 1
-                ELSE
-                  COALESCE(
-                    token_version,
-                    0
-                  )
-              END,
+              token_version =
+                CASE
+                  WHEN $2 = true
+                  THEN
+                    COALESCE(
+                      token_version,
+                      0
+                    ) + 1
+                  ELSE
+                    COALESCE(
+                      token_version,
+                      0
+                    )
+                END,
 
-            updated_at = NOW()
+              updated_at = NOW()
 
-          WHERE id = $3
+            WHERE id = $3
           `,
           [
             failedAttempts,
             shouldBlock,
-            Number(user.id)
+            Number(
+              user.id
+            )
           ]
         );
 
-        if (shouldBlock) {
-          return res.status(423).json({
-            success: false,
-            code: "ACCOUNT_BLOCKED",
-            message:
-              "5 удаа нууц үг буруу оруулсан тул хэрэглэгч блоклогдлоо"
-          });
+        if (
+          shouldBlock
+        ) {
+          return res
+            .status(423)
+            .json({
+              success: false,
+              code:
+                "ACCOUNT_BLOCKED",
+              message:
+                "5 удаа нууц үг буруу оруулсан тул хэрэглэгч блоклогдлоо"
+            });
         }
 
-        return res.status(401).json({
-          success: false,
-          code: "INVALID_CREDENTIALS",
+        const remainingAttempts =
+          MAX_FAILED_ATTEMPTS -
+          failedAttempts;
 
-          remaining_attempts:
-            MAX_FAILED_ATTEMPTS -
-            failedAttempts,
+        return res
+          .status(401)
+          .json({
+            success: false,
+            code:
+              "INVALID_CREDENTIALS",
 
-          message:
-            `И-мэйл эсвэл нууц үг буруу байна. Үлдсэн оролдлого: ${
-              MAX_FAILED_ATTEMPTS -
-              failedAttempts
-            }`
-        });
+            remaining_attempts:
+              remainingAttempts,
+
+            message:
+              `И-мэйл эсвэл нууц үг буруу байна. Үлдсэн оролдлого: ${remainingAttempts}`
+          });
       }
 
       await pool.query(
         `
-        UPDATE public.dashboard_users
-        SET
-          failed_login_attempts = 0,
-          is_blocked = false,
-          blocked_at = NULL,
-          updated_at = NOW()
-        WHERE id = $1
+          UPDATE public.dashboard_users
+          SET
+            failed_login_attempts = 0,
+            is_blocked = false,
+            blocked_at = NULL,
+            updated_at = NOW()
+          WHERE id = $1
         `,
         [
-          Number(user.id)
+          Number(
+            user.id
+          )
         ]
       );
 
       const refreshedResult =
         await pool.query(
           `
-          SELECT
-            id,
-            email,
-            role,
-            must_change_password,
-            is_active,
-            is_blocked,
-            failed_login_attempts,
-            token_version
-          FROM public.dashboard_users
-          WHERE id = $1
-          LIMIT 1
+            SELECT
+              id,
+              email,
+              role,
+              must_change_password,
+              is_active,
+              is_blocked,
+              failed_login_attempts,
+              token_version
+            FROM public.dashboard_users
+            WHERE id = $1
+            LIMIT 1
           `,
           [
-            Number(user.id)
+            Number(
+              user.id
+            )
           ]
         );
 
@@ -416,10 +345,6 @@ router.post(
           refreshed
         );
 
-      loginAttempts.delete(
-        getClientKey(req)
-      );
-
       return res.json({
         success: true,
 
@@ -430,17 +355,21 @@ router.post(
             refreshed
           )
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "LOGIN ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Internal server error"
+        });
     }
   }
 );
@@ -456,18 +385,18 @@ router.get(
       const result =
         await pool.query(
           `
-          SELECT
-            id,
-            email,
-            role,
-            must_change_password,
-            is_active,
-            is_blocked,
-            failed_login_attempts,
-            token_version
-          FROM public.dashboard_users
-          WHERE id = $1
-          LIMIT 1
+            SELECT
+              id,
+              email,
+              role,
+              must_change_password,
+              is_active,
+              is_blocked,
+              failed_login_attempts,
+              token_version
+            FROM public.dashboard_users
+            WHERE id = $1
+            LIMIT 1
           `,
           [
             Number(
@@ -477,14 +406,18 @@ router.get(
         );
 
       if (
-        result.rows.length === 0
+        result.rows.length ===
+        0
       ) {
-        return res.status(401).json({
-          success: false,
-          code: "USER_REMOVED",
-          message:
-            "Хэрэглэгч олдсонгүй"
-        });
+        return res
+          .status(401)
+          .json({
+            success: false,
+            code:
+              "USER_REMOVED",
+            message:
+              "Хэрэглэгч олдсонгүй"
+          });
       }
 
       return res.json({
@@ -495,17 +428,21 @@ router.get(
             result.rows[0]
           )
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "AUTH ME ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Internal server error"
+        });
     }
   }
 );
@@ -520,17 +457,17 @@ router.post(
     try {
       await pool.query(
         `
-        UPDATE public.dashboard_users
-        SET
-          token_version =
-            COALESCE(
-              token_version,
-              0
-            ) + 1,
+          UPDATE public.dashboard_users
+          SET
+            token_version =
+              COALESCE(
+                token_version,
+                0
+              ) + 1,
 
-          updated_at = NOW()
+            updated_at = NOW()
 
-        WHERE id = $1
+          WHERE id = $1
         `,
         [
           Number(
@@ -542,17 +479,21 @@ router.post(
       return res.json({
         success: true
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "LOGOUT ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Internal server error"
+        });
     }
   }
 );
@@ -583,20 +524,28 @@ router.post(
             ""
         );
 
-      if (!currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Одоогийн нууц үгээ оруулна уу"
-        });
+      if (
+        !currentPassword
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Одоогийн нууц үгээ оруулна уу"
+          });
       }
 
-      if (!newPassword) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Шинэ нууц үгээ оруулна уу"
-        });
+      if (
+        !newPassword
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Шинэ нууц үгээ оруулна уу"
+          });
       }
 
       if (
@@ -604,40 +553,45 @@ router.post(
           newPassword
         )
       ) {
-        return res.status(400).json({
-          success: false,
-          code: "WEAK_PASSWORD",
-          message:
-            PASSWORD_MESSAGE
-        });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            code:
+              "WEAK_PASSWORD",
+            message:
+              PASSWORD_MESSAGE
+          });
       }
 
       if (
         newPassword !==
         confirmPassword
       ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Нууц үг таарахгүй байна"
-        });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Нууц үг таарахгүй байна"
+          });
       }
 
       const result =
         await pool.query(
           `
-          SELECT
-            id,
-            email,
-            password_hash,
-            role,
-            must_change_password,
-            is_active,
-            is_blocked,
-            token_version
-          FROM public.dashboard_users
-          WHERE id = $1
-          LIMIT 1
+            SELECT
+              id,
+              email,
+              password_hash,
+              role,
+              must_change_password,
+              is_active,
+              is_blocked,
+              token_version
+            FROM public.dashboard_users
+            WHERE id = $1
+            LIMIT 1
           `,
           [
             Number(
@@ -647,12 +601,16 @@ router.post(
         );
 
       if (
-        result.rows.length === 0
+        result.rows.length ===
+        0
       ) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found"
-        });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "User not found"
+          });
       }
 
       const user =
@@ -664,12 +622,16 @@ router.post(
           user.password_hash
         );
 
-      if (!currentValid) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Одоогийн нууц үг буруу байна"
-        });
+      if (
+        !currentValid
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Одоогийн нууц үг буруу байна"
+          });
       }
 
       const samePassword =
@@ -678,12 +640,16 @@ router.post(
           user.password_hash
         );
 
-      if (samePassword) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Шинэ нууц үг хуучин нууц үгтэй ижил байж болохгүй"
-        });
+      if (
+        samePassword
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Шинэ нууц үг хуучин нууц үгтэй ижил байж болохгүй"
+          });
       }
 
       const passwordHash =
@@ -695,33 +661,33 @@ router.post(
       const update =
         await pool.query(
           `
-          UPDATE public.dashboard_users
-          SET
-            password_hash = $1,
-            must_change_password = false,
-            failed_login_attempts = 0,
-            is_blocked = false,
-            blocked_at = NULL,
+            UPDATE public.dashboard_users
+            SET
+              password_hash = $1,
+              must_change_password = false,
+              failed_login_attempts = 0,
+              is_blocked = false,
+              blocked_at = NULL,
 
-            token_version =
-              COALESCE(
-                token_version,
-                0
-              ) + 1,
+              token_version =
+                COALESCE(
+                  token_version,
+                  0
+                ) + 1,
 
-            updated_at = NOW()
+              updated_at = NOW()
 
-          WHERE id = $2
+            WHERE id = $2
 
-          RETURNING
-            id,
-            email,
-            role,
-            must_change_password,
-            is_active,
-            is_blocked,
-            failed_login_attempts,
-            token_version
+            RETURNING
+              id,
+              email,
+              role,
+              must_change_password,
+              is_active,
+              is_blocked,
+              failed_login_attempts,
+              token_version
           `,
           [
             passwordHash,
@@ -752,17 +718,21 @@ router.post(
             updatedUser
           )
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "CHANGE PASSWORD ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Internal server error"
+        });
     }
   }
 );

@@ -13,49 +13,22 @@ router.get(
         branch_id
       } = req.query;
 
-      const values = [];
-      const conditions = [];
+      const effectiveDateTo =
+        date_to || date_from;
 
-      if (date_from) {
-        values.push(
-          date_from
-        );
+      const values = [
+        date_from,
+        effectiveDateTo
+      ];
 
-        const fromIndex =
-          values.length;
-
-        conditions.push(`
-          (
-            end_date IS NULL
-            OR end_date >= $${fromIndex}::date
-          )
-        `);
-      }
-
-      if (date_to) {
-        values.push(
-          date_to
-        );
-
-        const toIndex =
-          values.length;
-
-        conditions.push(`
-          (
-            start_date IS NULL
-            OR start_date <= $${toIndex}::date
-          )
-        `);
-      }
+      let branchCondition = "";
 
       if (
         branch_id &&
         branch_id !== "all"
       ) {
         const branchNumber =
-          Number(
-            branch_id
-          );
+          Number(branch_id);
 
         if (
           !Number.isInteger(
@@ -75,26 +48,17 @@ router.get(
           branchNumber
         );
 
-        const branchIndex =
-          values.length;
-
-        conditions.push(`
-          branch_id = $${branchIndex}
-        `);
+        branchCondition = `
+          AND branch_id = $3
+        `;
       }
-
-      const whereClause =
-        conditions.length > 0
-          ? `WHERE ${conditions.join(
-              " AND "
-            )}`
-          : "";
 
       console.log(
         "AREA STATS FILTER:",
         {
           date_from,
-          date_to,
+          date_to:
+            effectiveDateTo,
           branch_id
         }
       );
@@ -103,10 +67,22 @@ router.get(
         await pool.query(
           `
             WITH filtered_rows AS (
-              SELECT *
+              SELECT
+                category,
+                is_rented,
+                is_active
               FROM public.partnership_registration
-
-              ${whereClause}
+              WHERE
+                (
+                  end_date IS NULL
+                  OR end_date >= $1::date
+                )
+                AND
+                (
+                  start_date IS NULL
+                  OR start_date <= $2::date
+                )
+                ${branchCondition}
             )
 
             SELECT

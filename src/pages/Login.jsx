@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useDashboard } from "../context/DashboardContext";
 import { Navigate, useNavigate } from "react-router-dom";
+import { useDashboard } from "../context/DashboardContext";
 import { useAuth } from "../context/AuthContext";
 
 const API =
@@ -27,12 +27,89 @@ const translations = {
   }
 };
 
+function getRemainingAttemptsFromMessage(
+  message
+) {
+  const value =
+    String(message || "").trim();
+
+  const match =
+    value.match(
+      /Үлдсэн оролдлого\s*:\s*(\d+)/i
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const remaining =
+    Number(match[1]);
+
+  return Number.isFinite(remaining)
+    ? remaining
+    : null;
+}
+
+function getEnglishRemainingMessage(
+  remaining
+) {
+  const count =
+    Number(remaining);
+
+  if (!Number.isFinite(count)) {
+    return null;
+  }
+
+  if (count === 1) {
+    return (
+      "Incorrect email or password. " +
+      "1 attempt remaining"
+    );
+  }
+
+  return (
+    "Incorrect email or password. " +
+    `${count} attempts remaining`
+  );
+}
+
 function translateLoginError(
   message,
-  language
+  language,
+  remainingAttempts = null
 ) {
+  const value =
+    String(message || "").trim();
+
   if (language !== "en") {
-    return message;
+    return value;
+  }
+
+  if (
+    remainingAttempts !== null &&
+    remainingAttempts !== undefined
+  ) {
+    const remainingMessage =
+      getEnglishRemainingMessage(
+        remainingAttempts
+      );
+
+    if (remainingMessage) {
+      return remainingMessage;
+    }
+  }
+
+  const remainingFromMessage =
+    getRemainingAttemptsFromMessage(
+      value
+    );
+
+  if (
+    remainingFromMessage !== null
+  ) {
+    return getEnglishRemainingMessage(
+      remainingFromMessage
+    );
   }
 
   const messages = {
@@ -53,13 +130,14 @@ function translateLoginError(
   };
 
   return (
-    messages[message] ||
-    message
+    messages[value] ||
+    value
   );
 }
 
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
   const {
     login,
@@ -93,9 +171,7 @@ export default function Login() {
   ] = useState(false);
 
   const t =
-    translations[
-      language
-    ] ||
+    translations[language] ||
     translations.mn;
 
   function handleLanguageChange(
@@ -115,8 +191,7 @@ export default function Login() {
 
   if (authenticated) {
     if (
-      user
-        ?.must_change_password ===
+      user?.must_change_password ===
       true
     ) {
       return (
@@ -181,10 +256,18 @@ export default function Login() {
           data?.message ||
           t.error;
 
+        const remainingAttempts =
+          data?.remaining_attempts ??
+          data?.remainingAttempts ??
+          data?.attempts_remaining ??
+          data?.attemptsRemaining ??
+          null;
+
         throw new Error(
           translateLoginError(
             backendMessage,
-            language
+            language,
+            remainingAttempts
           )
         );
       }
@@ -207,9 +290,7 @@ export default function Login() {
 
       localStorage.setItem(
         "last_activity_at",
-        String(
-          Date.now()
-        )
+        String(Date.now())
       );
 
       localStorage.setItem(
@@ -218,8 +299,7 @@ export default function Login() {
       );
 
       if (
-        nextUser
-          .must_change_password
+        nextUser.must_change_password
       ) {
         navigate(
           "/change-password",
@@ -320,9 +400,7 @@ export default function Login() {
 
         <form
           className="login-form"
-          onSubmit={
-            handleSubmit
-          }
+          onSubmit={handleSubmit}
         >
           <h1>
             {t.login}
@@ -345,12 +423,9 @@ export default function Login() {
           <input
             type="email"
             value={email}
-            onChange={(
-              event
-            ) =>
+            onChange={(event) =>
               setEmail(
-                event.target
-                  .value
+                event.target.value
               )
             }
             autoComplete="email"
@@ -364,12 +439,9 @@ export default function Login() {
           <input
             type="password"
             value={password}
-            onChange={(
-              event
-            ) =>
+            onChange={(event) =>
               setPassword(
-                event.target
-                  .value
+                event.target.value
               )
             }
             autoComplete="current-password"
@@ -378,9 +450,7 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={
-              loading
-            }
+            disabled={loading}
           >
             {loading
               ? t.loading

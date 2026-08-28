@@ -1782,21 +1782,6 @@ span:last-child {
   gap: 14px;
 }
 
-.branch-re-legend-item {
-  display: inline-flex;
-
-  align-items: center;
-
-  gap: 5px;
-
-  color: #536177;
-
-  font-size: 10px;
-  font-weight: 700;
-
-  white-space: nowrap;
-}
-
 .branch-re-legend-dot {
   width: 10px;
   height: 10px;
@@ -1805,11 +1790,11 @@ span:last-child {
 }
 
 .branch-re-legend-dot.expense {
-  background: #2966e8;
+  background: #ff8c00;
 }
 
 .branch-re-legend-dot.revenue {
-  background: #43d77b;
+  background: #2966e8;
 }
 
 .branch-re-scroll {
@@ -2387,14 +2372,6 @@ span:last-child {
   height: 11px;
   flex: 0 0 11px;
   border-radius: 2px;
-}
-
-.branch-re-legend-dot.expense {
-  background: #2966e8;
-}
-
-.branch-re-legend-dot.revenue {
-  background: #43d77b;
 }
 
 @media (min-width: 1500px) {
@@ -6986,33 +6963,11 @@ span:last-child {
   gap: 14px;
 }
 
-.branch-re-legend-item {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 5px;
-
-  color: #536177;
-
-  font-size: 10px;
-  font-weight: 700;
-
-  white-space: nowrap;
-}
-
 .branch-re-legend-dot {
   width: 10px;
   height: 10px;
 
   border-radius: 2px;
-}
-
-.branch-re-legend-dot.expense {
-  background: #2966e8;
-}
-
-.branch-re-legend-dot.revenue {
-  background: #43d77b;
 }
 
 .revenue-expense-branch-chart-main {

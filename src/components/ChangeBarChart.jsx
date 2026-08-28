@@ -132,10 +132,10 @@ function CustomBarShape(props) {
 
   const labelX =
     negative
-      ? rectX - 9
+      ? rectX - 12
       : rectX +
         actualWidth +
-        9;
+        12;
 
   return (
     <g>
@@ -188,6 +188,37 @@ function CustomBarShape(props) {
   );
 }
 
+function CustomYAxisTick(
+  props
+) {
+  const {
+    x = 0,
+    y = 0,
+    payload
+  } = props;
+
+  return (
+    <text
+      x={
+        Number(x) - 30
+      }
+      y={
+        Number(y)
+      }
+      dy={3}
+      textAnchor="end"
+      fill="#536177"
+      fontSize={10}
+      fontWeight={500}
+    >
+      {
+        payload?.value ||
+        ""
+      }
+    </text>
+  );
+}
+
 function calculateAxis(
   data
 ) {
@@ -234,9 +265,13 @@ function calculateAxis(
       1_000_000_000;
   }
 
+  const paddedMaximum =
+    maxAbsolute *
+    1.18;
+
   const edge =
     Math.ceil(
-      maxAbsolute /
+      paddedMaximum /
         step
     ) *
     step;
@@ -315,13 +350,16 @@ export default function ChangeBarChart({
     );
 
   const yAxisWidth =
-    90;
+    135;
 
   const chartLeftMargin =
-    15;
+    0;
 
   const chartRightMargin =
-    75;
+    65;
+
+  const bottomAxisRightMargin =
+    45;
 
   const visibleHeight =
     285;
@@ -389,7 +427,9 @@ export default function ChangeBarChart({
                   axisMax
                 ]}
                 hide
-                allowDataOverflow
+                allowDataOverflow={
+                  false
+                }
               />
 
               <YAxis
@@ -407,13 +447,9 @@ export default function ChangeBarChart({
                 interval={
                   0
                 }
-                tick={{
-                  fill:
-                    "#536177",
-
-                  fontSize:
-                    10
-                }}
+                tick={
+                  <CustomYAxisTick />
+                }
               />
 
               <Tooltip
@@ -467,7 +503,7 @@ export default function ChangeBarChart({
               }px`,
 
             marginRight:
-              `${chartRightMargin}px`
+              `${bottomAxisRightMargin}px`
           }}
         >
           {axisTicks.map(

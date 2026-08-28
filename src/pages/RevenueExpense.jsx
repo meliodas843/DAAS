@@ -458,16 +458,16 @@ function ExpenseGroupChart({
             width="100%"
             height="100%"
           >
-  <BarChart
-    data={safeData}
-    layout="vertical"
-    margin={{
-      top: 8,
-      right: 70,
-      bottom: 4,
-      left: -18
-    }}
-  >
+            <BarChart
+              data={safeData}
+              layout="vertical"
+              margin={{
+                top: 8,
+                right: 70,
+                bottom: 4,
+                left: -18
+              }}
+            >
               <CartesianGrid
                 strokeDasharray="3 3"
                 horizontal={
@@ -796,7 +796,7 @@ function BranchRevenueExpenseChart({
                 name={
                   expenseLabel
                 }
-                fill="#2966e8"
+                fill="#ff8c00"
                 barSize={
                   10
                 }
@@ -823,7 +823,7 @@ function BranchRevenueExpenseChart({
                 name={
                   revenueLabel
                 }
-                fill="#43d77b"
+                fill="#2966e8"
                 barSize={
                   10
                 }
