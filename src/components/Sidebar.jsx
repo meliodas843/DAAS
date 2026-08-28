@@ -73,18 +73,18 @@ export default function Sidebar() {
         <div className="brand-main">
           <img
             src="/misheel.jpeg"
-            alt="Мишээл групп"
+            alt={language === "mn" ? "Мишээл групп" : "Misheel group"}
             className="brand-logo"
           />
 
           {!sidebarCollapsed && (
             <div className="brand-text">
               <strong>
-                МИШЭЭЛ
+                {language === "mn" ? "МИШЭЭЛ" : "MISHEEL"}
               </strong>
 
               <span>
-                ГРУПП
+                {language === "mn" ? "ГРУПП" : "GROUP"}
               </span>
             </div>
           )}

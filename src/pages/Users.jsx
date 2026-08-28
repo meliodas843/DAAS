@@ -140,6 +140,8 @@ export default function Users() {
             "Failed to load users",
           createError:
             "Failed to add user",
+          userExists:
+            "A user with this email already exists.",
           updateError:
             "Failed to update user",
           deleteError:
@@ -147,7 +149,7 @@ export default function Users() {
           unblockError:
             "Failed to unblock user",
           passwordRequirement:
-            "10+ characters, uppercase, lowercase, number and special character",
+            "Password should be 10+ characters, uppercase, lowercase, number and special character",
           adminLimit:
             "A maximum of 2 Admin users is allowed",
           deleteQuestion:
@@ -246,6 +248,8 @@ export default function Users() {
             "Хэрэглэгчдийн мэдээлэл татахад алдаа гарлаа",
           createError:
             "Хэрэглэгч нэмэхэд алдаа гарлаа",
+          userExists:
+            "Энэ и-мэйл хаягтай хэрэглэгч бүртгэлтэй байна.",
           updateError:
             "Хэрэглэгч шинэчлэхэд алдаа гарлаа",
           deleteError:
@@ -253,7 +257,7 @@ export default function Users() {
           unblockError:
             "Блок гаргахад алдаа гарлаа",
           passwordRequirement:
-            "10+ тэмдэгт, том/жижиг үсэг, тоо, тусгай тэмдэг",
+            "Нууц үг 10+ тэмдэгт, том/жижиг үсэг, тоо, тусгай тэмдэг байх",
           adminLimit:
             "Админ хэрэглэгчийн тоо ихдээ 2 байна",
           deleteQuestion:
@@ -505,6 +509,23 @@ export default function Users() {
       );
     }
 
+    const existingUser =
+      users.find(
+        (item) =>
+          String(
+            item.email || ""
+          )
+            .trim()
+            .toLowerCase() ===
+          cleanEmail
+      );
+
+    if (existingUser) {
+      throw new Error(
+        t.userExists
+      );
+    }
+
     if (
       !isStrongPassword(
         password
@@ -551,10 +572,30 @@ export default function Users() {
         }
       );
 
-    const data =
-      await response.json();
+    let data = null;
+
+    try {
+      data =
+        await response.json();
+    } catch {
+      data = null;
+    }
 
     if (!response.ok) {
+      if (
+        response.status === 409 ||
+        data?.message
+          ?.toLowerCase()
+          .includes("already") ||
+        data?.message
+          ?.toLowerCase()
+          .includes("exist")
+      ) {
+        throw new Error(
+          t.userExists
+        );
+      }
+
       throw new Error(
         data?.message ||
           t.createError
@@ -939,9 +980,8 @@ export default function Users() {
 
         <form
           className="users-create-form"
-          onSubmit={
-            handleSubmit
-          }
+          onSubmit={handleSubmit}
+          autoComplete="off"
         >
           <div className="users-form-field">
             <label>
@@ -957,6 +997,8 @@ export default function Users() {
                 )
               }
               placeholder="user@misheel.mn"
+              name="new-user-email"
+              autoComplete="off"
               disabled={
                 Boolean(
                   unblockTarget
@@ -989,6 +1031,8 @@ export default function Users() {
                 placeholder={
                   t.passwordPlaceholder
                 }
+                name="new-user-password"
+                autoComplete="new-password"
                 minLength={10}
                 required
               />
@@ -1252,7 +1296,8 @@ export default function Users() {
                               item.role
                             }
                             disabled={
-                              busy
+                              busy ||
+                              !item.is_active
                             }
                             onChange={(
                               event

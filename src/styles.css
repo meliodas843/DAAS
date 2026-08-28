@@ -1606,16 +1606,107 @@ input {
     transparent;
 }
 
+.right-scroll-chart-scroll,
+.branch-re-scroll {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  flex: 1 1 auto;
+
+  overflow-x: hidden;
+  overflow-y: scroll;
+
+  padding-right: 4px;
+
+  scrollbar-width: auto;
+  scrollbar-color:
+    #94a3b8
+    #edf2f7;
+}
+
+.right-scroll-chart-scroll::-webkit-scrollbar,
+.branch-re-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.right-scroll-chart-scroll::-webkit-scrollbar-track,
+.branch-re-scroll::-webkit-scrollbar-track {
+  background: #edf2f7;
+  border-radius: 999px;
+}
+
+.right-scroll-chart-scroll::-webkit-scrollbar-thumb,
+.branch-re-scroll::-webkit-scrollbar-thumb {
+  min-height: 45px;
+
+  background: #94a3b8;
+
+  border: 2px solid #edf2f7;
+  border-radius: 999px;
+}
+
+.right-scroll-chart-scroll::-webkit-scrollbar-thumb:hover,
+.branch-re-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.right-chart-hover-scroll,
+.branch-re-hover-scroll {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.right-scroll-chart {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-scroll-chart
+.right-chart-hover-scroll {
+  height: calc(100% - 36px);
+}
+
+.branch-re-chart {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.branch-re-chart
+.branch-re-hover-scroll {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.right-scroll-chart-body,
+.branch-re-body {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
 .right-scroll-axis {
   height: 36px;
   min-height: 36px;
 
-  flex:
-    0 0
-    36px;
+  flex: 0 0 36px;
 
-  padding-left: 220px;
-  padding-right: 60px;
+  padding-left: 162px;
+  padding-right: 70px;
 
   background: #ffffff;
 }
@@ -1773,12 +1864,10 @@ span:last-child {
   height: 36px;
   min-height: 36px;
 
-  flex:
-    0 0
-    36px;
+  flex: 0 0 36px;
 
-  padding-left: 200px;
-  padding-right: 35px;
+  padding-left: 157px;
+  padding-right: 105px;
 
   background: #ffffff;
 }
@@ -2108,13 +2197,6 @@ span:last-child {
   overflow: visible;
 }
 
-.shared-bottom-axis-track {
-  position: relative;
-  height: 38px;
-  border-top: 1px solid #edf1f7;
-  overflow: visible;
-}
-
 .shared-bottom-axis-tick {
   position: absolute;
   top: 10px;
@@ -2144,17 +2226,11 @@ span:last-child {
   overflow: hidden;
 }
 
-.change-bar-chart-scroll {
+.change-bar-hover-scroll {
   width: 100%;
-  min-width: 0;
+  height: 0;
   min-height: 0;
-  flex: 1 1 auto;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  scrollbar-width: auto;
-  scrollbar-color:
-    #94a3b8
-    #edf2f7;
+  flex: 1 1 0;
 }
 
 .fixed-axis-chart,
@@ -2256,14 +2332,14 @@ span:last-child {
 
 .shared-bottom-axis-track {
   position: relative;
-  height: 38px;
+  height: 28px;
   border-top: 1px solid #edf1f7;
   overflow: visible;
 }
 
 .shared-bottom-axis-tick {
   position: absolute;
-  top: 10px;
+  top: 2px;
   color: #8292aa;
   font-size: 10px;
   line-height: 1;
@@ -5679,6 +5755,12 @@ span:last-child {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.receivables-view-select,
+.payables-view-select {
+  width: 100px;
+  min-width: 140px;
 }
 
 .receivables-view-label {

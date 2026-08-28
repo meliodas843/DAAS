@@ -2,11 +2,75 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState
 } from "react";
 
 const DashboardContext =
   createContext(null);
+
+function buildDashboardFilters(
+  selectedMonth,
+  selectedBranch
+) {
+  const filters = {};
+
+  if (
+    selectedMonth &&
+    selectedMonth !== "all"
+  ) {
+    const match =
+      String(
+        selectedMonth
+      ).match(
+        /^(\d{4})[-/](\d{1,2})$/
+      );
+
+    if (match) {
+      const year =
+        Number(match[1]);
+
+      const month =
+        Number(match[2]);
+
+      const lastDay =
+        new Date(
+          year,
+          month,
+          0
+        ).getDate();
+
+      const paddedMonth =
+        String(
+          month
+        ).padStart(
+          2,
+          "0"
+        );
+
+      filters.date_from =
+        `${year}-${paddedMonth}-01`;
+
+      filters.date_to =
+        `${year}-${paddedMonth}-${String(
+          lastDay
+        ).padStart(
+          2,
+          "0"
+        )}`;
+    }
+  }
+
+  if (
+    selectedBranch &&
+    selectedBranch !== "all"
+  ) {
+    filters.branch_id =
+      selectedBranch;
+  }
+
+  return filters;
+}
 
 export function DashboardProvider({
   children
@@ -63,6 +127,19 @@ export function DashboardProvider({
     );
   });
 
+  const filters =
+    useMemo(
+      () =>
+        buildDashboardFilters(
+          selectedMonth,
+          selectedBranch
+        ),
+      [
+        selectedMonth,
+        selectedBranch
+      ]
+    );
+
   function setLanguage(
     nextLanguage
   ) {
@@ -110,6 +187,15 @@ export function DashboardProvider({
     );
   }, [
     sidebarCollapsed
+  ]);
+
+  useEffect(() => {
+    console.log(
+      "DASHBOARD FILTERS:",
+      filters
+    );
+  }, [
+    filters
   ]);
 
   useEffect(() => {
@@ -188,6 +274,8 @@ export function DashboardProvider({
 
         selectedBranch,
         setSelectedBranch,
+
+        filters,
 
         language,
         setLanguage,

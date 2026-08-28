@@ -739,7 +739,7 @@ function FinancialChart({
               t.expense
             }
             dataKey="expense"
-            fill="#8B5CF6"
+            fill="#ff6423"
             barSize={13}
             radius={[
               3,
@@ -772,12 +772,12 @@ function FinancialChart({
             }
             type="monotone"
             dataKey="profit"
-            stroke="#f15b16"
+            stroke="#0f8a59"
             strokeWidth={2}
             dot={{
               r: 4,
               fill:
-                "#f15b16"
+                "#0f8a59"
             }}
             isAnimationActive={
               true

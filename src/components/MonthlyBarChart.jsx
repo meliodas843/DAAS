@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -67,7 +68,9 @@ function formatCompact(value) {
     }K`;
   }
 
-  return `${Math.round(number)}`;
+  return `${Math.round(
+    number
+  )}`;
 }
 
 function formatTooltip(value) {
@@ -105,7 +108,10 @@ function formatMonth(value) {
 
   return `${match[1]}/${String(
     match[2]
-  ).padStart(2, "0")}`;
+  ).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 export default function MonthlyBarChart({
@@ -127,15 +133,18 @@ export default function MonthlyBarChart({
       ? data.map(
           (item) => ({
             ...item,
+
             month:
               formatMonth(
                 item.month ||
                   item.name ||
                   ""
               ),
+
             value:
               Number(
-                item.value || 0
+                item.value ||
+                  0
               )
           })
         )
@@ -152,7 +161,7 @@ export default function MonthlyBarChart({
 
   const calculatedMax =
     maxValue > 0
-      ? maxValue * 1.15
+      ? maxValue * 1.22
       : 1;
 
   const chartWidth =
@@ -180,9 +189,11 @@ export default function MonthlyBarChart({
             height="100%"
           >
             <BarChart
-              data={safeData}
+              data={
+                safeData
+              }
               margin={{
-                top: 20,
+                top: 34,
                 right: 18,
                 bottom: 4,
                 left: 8
@@ -191,22 +202,36 @@ export default function MonthlyBarChart({
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                vertical={false}
+                vertical={
+                  false
+                }
                 stroke="#edf1f7"
               />
 
               <XAxis
                 dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-                height={28}
-                tickMargin={7}
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                interval={
+                  0
+                }
+                height={
+                  28
+                }
+                tickMargin={
+                  7
+                }
                 tick={{
                   fill:
                     "#8292aa",
-                  fontSize: 10,
-                  fontWeight: 500
+                  fontSize:
+                    10,
+                  fontWeight:
+                    500
                 }}
                 tickFormatter={(
                   value
@@ -231,13 +256,20 @@ export default function MonthlyBarChart({
                   0,
                   calculatedMax
                 ]}
-                axisLine={false}
-                tickLine={false}
-                width={62}
+                axisLine={
+                  false
+                }
+                tickLine={
+                  false
+                }
+                width={
+                  62
+                }
                 tick={{
                   fill:
                     "#8292aa",
-                  fontSize: 10
+                  fontSize:
+                    10
                 }}
                 tickFormatter={
                   formatCompact
@@ -249,7 +281,9 @@ export default function MonthlyBarChart({
                   fill:
                     "rgba(15, 23, 42, 0.025)"
                 }}
-                formatter={(value) => [
+                formatter={(
+                  value
+                ) => [
                   formatTooltip(
                     value
                   ),
@@ -262,19 +296,49 @@ export default function MonthlyBarChart({
 
               <Bar
                 dataKey="value"
-                fill={color}
-                barSize={24}
+                fill={
+                  color
+                }
+                barSize={
+                  24
+                }
                 radius={[
                   4,
                   4,
                   0,
                   0
                 ]}
-                isAnimationActive
-                animationBegin={100}
-                animationDuration={1000}
+                isAnimationActive={
+                  true
+                }
+                animationBegin={
+                  100
+                }
+                animationDuration={
+                  1000
+                }
                 animationEasing="ease-out"
-              />
+              >
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  formatter={(
+                    value
+                  ) =>
+                    formatCompact(
+                      value
+                    )
+                  }
+                  style={{
+                    fill:
+                      "#101827",
+                    fontSize:
+                      10,
+                    fontWeight:
+                      800
+                  }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

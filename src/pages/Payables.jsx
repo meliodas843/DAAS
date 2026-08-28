@@ -24,6 +24,11 @@ import {
   useDashboard
 } from "../context/DashboardContext";
 
+import {
+  getDashboardFilters,
+  getMonthlyFilters
+} from "../utils/filters";
+
 const translations = {
   mn: {
     loading:
@@ -104,9 +109,10 @@ const translations = {
 
 export default function Payables() {
   const {
+    selectedMonth,
+    selectedBranch,
     language
-  } =
-    useDashboard();
+  } = useDashboard();
 
   const currentLanguage =
     language === "en"
@@ -167,13 +173,16 @@ export default function Payables() {
 
         setError("");
 
-        const filters = {
-          date_from:
-            "2026-01-01",
+        const filters =
+          getDashboardFilters(
+            selectedMonth,
+            selectedBranch
+          );
 
-          date_to:
-            "2026-08-31"
-        };
+        const monthlyFilters =
+          getMonthlyFilters(
+            selectedBranch
+          );
 
         const [
           accountsData,
@@ -187,7 +196,7 @@ export default function Payables() {
             ),
 
             getPayableChanges(
-              filters
+              monthlyFilters
             ),
 
             getPayableBranches(
@@ -195,7 +204,7 @@ export default function Payables() {
             ),
 
             getPayableMonthly(
-              filters
+              monthlyFilters
             )
           ]);
 
@@ -260,7 +269,10 @@ export default function Payables() {
       mounted =
         false;
     };
-  }, []);
+  }, [
+    selectedMonth,
+    selectedBranch
+  ]);
 
   if (loading) {
     return (
@@ -329,7 +341,8 @@ export default function Payables() {
                 title={t.downloadExcel}
                 onClick={() =>
                   exportChartToExcel({
-                    data: combinedData,
+                    data:
+                      combinedData,
 
                     fileName:
                       combinedTitle,

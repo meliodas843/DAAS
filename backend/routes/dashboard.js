@@ -13,34 +13,40 @@ router.get(
         branch_id
       } = req.query;
 
-      const refDate =
-        date_to || date_from;
-
       const values = [];
-      let index = 1;
+      const conditions = [];
 
-      let activeDateFilter = "";
-
-      if (refDate) {
+      if (date_from) {
         values.push(
-          refDate
+          date_from
         );
 
-        activeDateFilter = `
-          AND (
-            start_date IS NULL
-            OR start_date <= $${index}::date
-          )
-          AND (
-            end_date IS NULL
-            OR end_date >= $${index}::date
-          )
-        `;
+        const fromIndex =
+          values.length;
 
-        index++;
+        conditions.push(`
+          (
+            end_date IS NULL
+            OR end_date >= $${fromIndex}::date
+          )
+        `);
       }
 
-      let branchFilter = "";
+      if (date_to) {
+        values.push(
+          date_to
+        );
+
+        const toIndex =
+          values.length;
+
+        conditions.push(`
+          (
+            start_date IS NULL
+            OR start_date <= $${toIndex}::date
+          )
+        `);
+      }
 
       if (
         branch_id &&
@@ -69,64 +75,82 @@ router.get(
           branchNumber
         );
 
-        branchFilter = `
-          AND branch_id = $${index}
-        `;
+        const branchIndex =
+          values.length;
 
-        index++;
+        conditions.push(`
+          branch_id = $${branchIndex}
+        `);
       }
+
+      const whereClause =
+        conditions.length > 0
+          ? `WHERE ${conditions.join(
+              " AND "
+            )}`
+          : "";
+
+      console.log(
+        "AREA STATS FILTER:",
+        {
+          date_from,
+          date_to,
+          branch_id
+        }
+      );
 
       const result =
         await pool.query(
           `
-          SELECT
-            COUNT(*) FILTER (
-              WHERE
-                category = 'rented'
-                AND is_rented = true
-                AND is_active = true
-                ${activeDateFilter}
-                ${branchFilter}
-            )::int AS rented,
+            WITH filtered_rows AS (
+              SELECT *
+              FROM public.partnership_registration
 
-            COUNT(*) FILTER (
-              WHERE
-                category = 'rented'
-                AND is_active = true
-                ${activeDateFilter}
-                ${branchFilter}
-            )::int AS total,
+              ${whereClause}
+            )
 
-            COUNT(*) FILTER (
-              WHERE
-                category = 'rented'
-                AND is_active = true
-                AND is_rented = false
-                ${activeDateFilter}
-                ${branchFilter}
-            )::int AS vacant
+            SELECT
+              COUNT(*) FILTER (
+                WHERE
+                  category = 'rented'
+                  AND is_rented = true
+                  AND is_active = true
+              )::int AS rented,
 
-          FROM public.partnership_registration
+              COUNT(*) FILTER (
+                WHERE
+                  category = 'rented'
+                  AND is_active = true
+              )::int AS total,
+
+              COUNT(*) FILTER (
+                WHERE
+                  category = 'rented'
+                  AND is_active = true
+                  AND is_rented = false
+              )::int AS vacant
+
+            FROM filtered_rows
           `,
           values
         );
 
+      const row =
+        result.rows[0] || {};
+
       const rented =
         Number(
-          result.rows[0]
-            ?.rented ?? 0
+          row.rented ?? 0
         );
 
       const total =
         Number(
-          result.rows[0]
-            ?.total ?? 0
+          row.total ?? 0
         );
 
       const vacant =
         Number(
-          result.rows[0]
-            ?.vacant ?? 0
+          row.vacant ?? 0
         );
 
       const utilization =
@@ -141,6 +165,16 @@ router.get(
               ).toFixed(2)
             )
           : 0;
+
+      console.log(
+        "AREA STATS RESULT:",
+        {
+          rented,
+          total,
+          vacant,
+          utilization
+        }
+      );
 
       return res.json({
         success: true,

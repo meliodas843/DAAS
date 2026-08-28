@@ -15,6 +15,7 @@ import {
   useState
 } from "react";
 
+import HoverScroll from "../components/HoverScroll";
 import Card from "../components/Card";
 import HorizontalBarChart from "../components/HorizontalBarChart";
 import ExcelDownloadButton from "../components/ExcelDownloadButton";
@@ -92,7 +93,9 @@ function formatCompact(value) {
     }K`;
   }
 
-  return `${Math.round(number)}`;
+  return `${Math.round(
+    number
+  )}`;
 }
 
 function formatTooltip(value) {
@@ -101,7 +104,9 @@ function formatTooltip(value) {
 
   return `₮${Math.round(
     number
-  ).toLocaleString("en-US")}`;
+  ).toLocaleString(
+    "en-US"
+  )}`;
 }
 
 function wrapLabel(
@@ -113,12 +118,16 @@ function wrapLabel(
   }
 
   const words =
-    String(text).split(" ");
+    String(text).split(
+      " "
+    );
 
   const lines = [];
   let current = "";
 
-  for (const word of words) {
+  for (
+    const word of words
+  ) {
     const next =
       current
         ? `${current} ${word}`
@@ -131,7 +140,9 @@ function wrapLabel(
       current = next;
     } else {
       if (current) {
-        lines.push(current);
+        lines.push(
+          current
+        );
       }
 
       current = word;
@@ -139,36 +150,49 @@ function wrapLabel(
   }
 
   if (current) {
-    lines.push(current);
+    lines.push(
+      current
+    );
   }
 
-  return lines.slice(0, 3);
+  return lines.slice(
+    0,
+    3
+  );
 }
 
 function RightSideYAxisTick({
-  y,
+  x = 0,
+  y = 0,
   payload
 }) {
   const lines =
     wrapLabel(
-      payload?.value || "",
-      24
+      payload?.value ||
+        "",
+      22
     );
 
-  const lineHeight = 12;
+  const lineHeight =
+    12;
 
   const startY =
     y -
-    ((lines.length - 1) *
-      lineHeight) /
+    (
+      (
+        lines.length -
+        1
+      ) *
+      lineHeight
+    ) /
       2;
 
   return (
     <g>
       <text
-        x={8}
+        x={x - 10}
         y={startY}
-        textAnchor="start"
+        textAnchor="end"
         fill="#536177"
         fontSize={10.5}
         fontWeight={500}
@@ -180,7 +204,7 @@ function RightSideYAxisTick({
           ) => (
             <tspan
               key={`${line}-${index}`}
-              x={8}
+              x={x - 10}
               dy={
                 index === 0
                   ? 0
@@ -204,10 +228,14 @@ function RightValueLabel({
   value
 }) {
   const number =
-    Number(value || 0);
+    Number(
+      value || 0
+    );
 
   if (
-    !Number.isFinite(number) ||
+    !Number.isFinite(
+      number
+    ) ||
     number === 0
   ) {
     return null;
@@ -215,15 +243,24 @@ function RightValueLabel({
 
   return (
     <text
-      x={x + width + 7}
-      y={y + height / 2}
+      x={
+        x +
+        width +
+        7
+      }
+      y={
+        y +
+        height / 2
+      }
       dominantBaseline="middle"
       textAnchor="start"
       fill="#101827"
       fontSize={10}
       fontWeight={800}
     >
-      {formatCompact(number)}
+      {formatCompact(
+        number
+      )}
     </text>
   );
 }
@@ -237,7 +274,8 @@ function getExpenseAxisMax(
         (item) =>
           Math.abs(
             Number(
-              item.value || 0
+              item.value ||
+                0
             )
           )
       ),
@@ -335,7 +373,9 @@ function getTicks(max) {
     ];
   }
 
-  const ticks = [0];
+  const ticks = [
+    0
+  ];
 
   for (
     let value =
@@ -344,7 +384,9 @@ function getTicks(max) {
     value +=
       1_000_000_000
   ) {
-    ticks.push(value);
+    ticks.push(
+      value
+    );
   }
 
   return ticks;
@@ -355,14 +397,16 @@ function ExpenseGroupChart({
   language = "mn"
 }) {
   const safeData =
-    Array.isArray(data)
+    Array.isArray(
+      data
+    )
       ? data.map(
           (item) => ({
             ...item,
-
             value:
               Number(
-                item.value || 0
+                item.value ||
+                  0
               )
           })
         )
@@ -374,11 +418,15 @@ function ExpenseGroupChart({
     );
 
   const ticks =
-    getTicks(axisMax);
+    getTicks(
+      axisMax
+    );
 
-  const rowHeight = 36;
+  const rowHeight =
+    36;
 
-  const visibleHeight = 270;
+  const visibleHeight =
+    270;
 
   const chartHeight =
     Math.max(
@@ -395,7 +443,10 @@ function ExpenseGroupChart({
 
   return (
     <div className="right-scroll-chart">
-      <div className="right-scroll-chart-scroll">
+      <HoverScroll
+        direction="vertical"
+        className="right-chart-hover-scroll"
+      >
         <div
           className="right-scroll-chart-body"
           style={{
@@ -407,20 +458,21 @@ function ExpenseGroupChart({
             width="100%"
             height="100%"
           >
-            <BarChart
-              data={safeData}
-              layout="vertical"
-              margin={{
-                top: 8,
-                right: 60,
-                bottom: 4,
-                left: 0
-              }}
-              barCategoryGap={12}
-            >
+  <BarChart
+    data={safeData}
+    layout="vertical"
+    margin={{
+      top: 8,
+      right: 70,
+      bottom: 4,
+      left: -18
+    }}
+  >
               <CartesianGrid
                 strokeDasharray="3 3"
-                horizontal={false}
+                horizontal={
+                  false
+                }
                 stroke="#edf1f7"
               />
 
@@ -437,7 +489,7 @@ function ExpenseGroupChart({
               <YAxis
                 type="category"
                 dataKey="name"
-                width={220}
+                width={180}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -464,14 +516,18 @@ function ExpenseGroupChart({
               <Bar
                 dataKey="value"
                 fill="#2966e8"
-                barSize={15}
+                barSize={
+                  15
+                }
                 radius={[
                   0,
                   4,
                   4,
                   0
                 ]}
-                animationDuration={700}
+                animationDuration={
+                  700
+                }
               >
                 <LabelList
                   dataKey="value"
@@ -483,19 +539,23 @@ function ExpenseGroupChart({
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </HoverScroll>
 
       <div className="right-scroll-axis">
         <div className="right-scroll-axis-track">
           {ticks.map(
             (tick) => (
               <span
-                key={tick}
+                key={
+                  tick
+                }
                 style={{
                   left:
                     `${
-                      (tick /
-                        axisMax) *
+                      (
+                        tick /
+                        axisMax
+                      ) *
                       100
                     }%`
                 }}
@@ -521,13 +581,14 @@ function getBranchAxisMax(
         (item) => [
           Math.abs(
             Number(
-              item.revenue || 0
+              item.revenue ||
+                0
             )
           ),
-
           Math.abs(
             Number(
-              item.expense || 0
+              item.expense ||
+                0
             )
           )
         ]
@@ -575,7 +636,9 @@ function getBranchAxisMax(
 function getBranchTicks(
   max
 ) {
-  return getTicks(max);
+  return getTicks(
+    max
+  );
 }
 
 function BranchRevenueExpenseChart({
@@ -583,19 +646,23 @@ function BranchRevenueExpenseChart({
   language = "mn"
 }) {
   const safeData =
-    Array.isArray(data)
+    Array.isArray(
+      data
+    )
       ? data.map(
           (item) => ({
             ...item,
 
             revenue:
               Number(
-                item.revenue || 0
+                item.revenue ||
+                  0
               ),
 
             expense:
               Number(
-                item.expense || 0
+                item.expense ||
+                  0
               )
           })
         )
@@ -611,16 +678,18 @@ function BranchRevenueExpenseChart({
       axisMax
     );
 
-  const rowHeight = 36;
+  const rowHeight =
+    44;
 
-  const visibleHeight = 250;
+  const visibleHeight =
+    250;
 
   const chartHeight =
     Math.max(
       visibleHeight,
       safeData.length *
         rowHeight +
-        20
+        24
     );
 
   const expenseLabel =
@@ -649,7 +718,10 @@ function BranchRevenueExpenseChart({
         </span>
       </div>
 
-      <div className="branch-re-scroll">
+      <HoverScroll
+        direction="vertical"
+        className="branch-re-hover-scroll"
+      >
         <div
           className="branch-re-body"
           style={{
@@ -666,16 +738,18 @@ function BranchRevenueExpenseChart({
               layout="vertical"
               margin={{
                 top: 8,
-                right: 35,
+                right: 105,
                 bottom: 4,
-                left: 0
+                left: -18
               }}
               barCategoryGap={10}
               barGap={3}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                horizontal={false}
+                horizontal={
+                  false
+                }
                 stroke="#edf1f7"
               />
 
@@ -692,7 +766,7 @@ function BranchRevenueExpenseChart({
               <YAxis
                 type="category"
                 dataKey="name"
-                width={200}
+                width={175}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -719,47 +793,77 @@ function BranchRevenueExpenseChart({
 
               <Bar
                 dataKey="expense"
-                name={expenseLabel}
+                name={
+                  expenseLabel
+                }
                 fill="#2966e8"
-                barSize={10}
+                barSize={
+                  10
+                }
                 radius={[
                   0,
                   4,
                   4,
                   0
                 ]}
-                animationDuration={700}
-              />
+                animationDuration={
+                  700
+                }
+              >
+                <LabelList
+                  dataKey="expense"
+                  content={
+                    <RightValueLabel />
+                  }
+                />
+              </Bar>
 
               <Bar
                 dataKey="revenue"
-                name={revenueLabel}
+                name={
+                  revenueLabel
+                }
                 fill="#43d77b"
-                barSize={10}
+                barSize={
+                  10
+                }
                 radius={[
                   0,
                   4,
                   4,
                   0
                 ]}
-                animationDuration={700}
-              />
+                animationDuration={
+                  700
+                }
+              >
+                <LabelList
+                  dataKey="revenue"
+                  content={
+                    <RightValueLabel />
+                  }
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </HoverScroll>
 
       <div className="branch-re-fixed-axis">
         <div className="branch-re-fixed-axis-track">
           {ticks.map(
             (tick) => (
               <span
-                key={tick}
+                key={
+                  tick
+                }
                 style={{
                   left:
                     `${
-                      (tick /
-                        axisMax) *
+                      (
+                        tick /
+                        axisMax
+                      ) *
                       100
                     }%`
                 }}
@@ -894,20 +998,30 @@ export default function RevenueExpense() {
   const [
     loading,
     setLoading
-  ] = useState(true);
+  ] = useState(
+    true
+  );
 
   const [
     error,
     setError
-  ] = useState("");
+  ] = useState(
+    ""
+  );
 
   useEffect(() => {
-    let mounted = true;
+    let mounted =
+      true;
 
     async function load() {
       try {
-        setLoading(true);
-        setError("");
+        setLoading(
+          true
+        );
+
+        setError(
+          ""
+        );
 
         const [
           revenueData,
@@ -933,7 +1047,9 @@ export default function RevenueExpense() {
             )
           ]);
 
-        if (!mounted) {
+        if (
+          !mounted
+        ) {
           return;
         }
 
@@ -968,20 +1084,26 @@ export default function RevenueExpense() {
             ? expenseData
             : []
         );
-      } catch (err) {
+      } catch (
+        err
+      ) {
         console.error(
           "REVENUE EXPENSE ERROR:",
           err
         );
 
-        if (mounted) {
+        if (
+          mounted
+        ) {
           setError(
             err?.message ||
               "Data load failed"
           );
         }
       } finally {
-        if (mounted) {
+        if (
+          mounted
+        ) {
           setLoading(
             false
           );
@@ -992,7 +1114,8 @@ export default function RevenueExpense() {
     load();
 
     return () => {
-      mounted = false;
+      mounted =
+        false;
     };
   }, [
     filters
@@ -1009,13 +1132,14 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
-
       [
         revenueAccounts
       ]
@@ -1032,13 +1156,14 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
-
       [
         expenseGroups
       ]
@@ -1055,19 +1180,22 @@ export default function RevenueExpense() {
             b
           ) =>
             Number(
-              b.value || 0
+              b.value ||
+                0
             ) -
             Number(
-              a.value || 0
+              a.value ||
+                0
             )
         ),
-
       [
         expenseAccounts
       ]
     );
 
-  if (loading) {
+  if (
+    loading
+  ) {
     return (
       <div className="page-loading">
         {t.loading}
@@ -1075,7 +1203,9 @@ export default function RevenueExpense() {
     );
   }
 
-  if (error) {
+  if (
+    error
+  ) {
     return (
       <div className="page-error">
         {t.backendError}:{" "}
@@ -1125,42 +1255,60 @@ export default function RevenueExpense() {
 
                 <select
                   className="revenue-expense-view-select"
-                  value={viewType}
-                  onChange={(event) =>
+                  value={
+                    viewType
+                  }
+                  onChange={(
+                    event
+                  ) =>
                     setViewType(
-                      event.target.value
+                      event
+                        .target
+                        .value
                     )
                   }
                 >
                   <option value="revenue">
-                    {t.revenue}
+                    {
+                      t.revenue
+                    }
                   </option>
 
                   <option value="expense">
-                    {t.expense}
+                    {
+                      t.expense
+                    }
                   </option>
                 </select>
               </div>
 
               <ExcelDownloadButton
-                title={t.downloadExcel}
+                title={
+                  t.downloadExcel
+                }
                 onClick={() =>
                   exportChartToExcel({
-                    data: combinedData,
-                    fileName: combinedTitle,
+                    data:
+                      combinedData,
+
+                    fileName:
+                      combinedTitle,
 
                     sheetName:
-                      viewType === "revenue"
+                      viewType ===
+                      "revenue"
                         ? "Revenue Accounts"
                         : "Expense Accounts",
 
                     nameHeader:
-                      currentLanguage === "en"
+                      currentLanguage ===
+                      "en"
                         ? "Account"
                         : "Данс",
 
                     valueHeader:
-                      currentLanguage === "en"
+                      currentLanguage ===
+                      "en"
                         ? "Amount"
                         : "Дүн"
                   })
@@ -1180,7 +1328,9 @@ export default function RevenueExpense() {
               yAxisWidth={
                 combinedYAxisWidth
               }
-              barSize={20}
+              barSize={
+                20
+              }
               language={
                 currentLanguage
               }
@@ -1196,7 +1346,9 @@ export default function RevenueExpense() {
         <Card>
           <div className="chart-card-custom-header">
             <h3>
-              {t.expenseGroup}
+              {
+                t.expenseGroup
+              }
             </h3>
 
             <ExcelDownloadButton

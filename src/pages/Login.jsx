@@ -1,48 +1,65 @@
-import {
-  useState
-} from "react";
-import {
-  Navigate,
-  useNavigate
-} from "react-router-dom";
-import {
-  useAuth
-} from "../context/AuthContext";
+import { useState } from "react";
+import { useDashboard } from "../context/DashboardContext";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const API =
-  import.meta.env
-    .VITE_API_URL ||
+  import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
 const translations = {
   mn: {
     login: "Нэвтрэх",
-    subtitle:
-      "Удирдлагын самбарт нэвтрэх",
+    subtitle: "Удирдлагын самбарт нэвтрэх",
     email: "И-мэйл",
     password: "Нууц үг",
-    loading:
-      "Нэвтэрч байна...",
-    error:
-      "Нэвтрэхэд алдаа гарлаа"
+    loading: "Нэвтэрч байна...",
+    error: "Нэвтрэхэд алдаа гарлаа"
   },
 
   en: {
     login: "Login",
-    subtitle:
-      "Sign in to the dashboard",
+    subtitle: "Sign in to the dashboard",
     email: "Email",
     password: "Password",
-    loading:
-      "Signing in...",
-    error:
-      "Failed to sign in"
+    loading: "Signing in...",
+    error: "Failed to sign in"
   }
 };
 
+function translateLoginError(
+  message,
+  language
+) {
+  if (language !== "en") {
+    return message;
+  }
+
+  const messages = {
+    "Хэрэглэгч блоклогдсон байна":
+      "User is blocked",
+
+    "И-мэйл эсвэл нууц үг буруу байна":
+      "Incorrect email or password",
+
+    "5 удаа нууц үг буруу оруулсан тул хэрэглэгч блоклогдлоо":
+      "User has been blocked after 5 incorrect password attempts",
+
+    "Хэт олон нэвтрэх оролдлого хийлээ. Түр хүлээгээд дахин оролдоно уу.":
+      "Too many login attempts. Please wait a moment and try again.",
+
+    "Хэрэглэгч идэвхгүй байна":
+      "User is inactive"
+  };
+
+  return (
+    messages[message] ||
+    message
+  );
+}
+
 export default function Login() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
   const {
     login,
@@ -50,16 +67,10 @@ export default function Login() {
     user
   } = useAuth();
 
-  const [
+  const {
     language,
     setLanguage
-  ] = useState(() => {
-    return (
-      localStorage.getItem(
-        "language"
-      ) || "mn"
-    );
-  });
+  } = useDashboard();
 
   const [
     email,
@@ -82,9 +93,12 @@ export default function Login() {
   ] = useState(false);
 
   const t =
-    translations[language];
+    translations[
+      language
+    ] ||
+    translations.mn;
 
-  function changeLanguage(
+  function handleLanguageChange(
     nextLanguage
   ) {
     setLanguage(
@@ -99,9 +113,7 @@ export default function Login() {
     setError("");
   }
 
-  if (
-    authenticated
-  ) {
+  if (authenticated) {
     if (
       user
         ?.must_change_password ===
@@ -137,16 +149,19 @@ export default function Login() {
           `${API}/auth/login`,
           {
             method: "POST",
+
             headers: {
               "Content-Type":
                 "application/json"
             },
+
             body:
               JSON.stringify({
                 email:
                   email
                     .trim()
                     .toLowerCase(),
+
                 password
               })
           }
@@ -161,12 +176,16 @@ export default function Login() {
         data = null;
       }
 
-      if (
-        !response.ok
-      ) {
-        throw new Error(
+      if (!response.ok) {
+        const backendMessage =
           data?.message ||
-            t.error
+          t.error;
+
+        throw new Error(
+          translateLoginError(
+            backendMessage,
+            language
+          )
         );
       }
 
@@ -177,8 +196,7 @@ export default function Login() {
           Boolean(
             data.user
               ?.must_change_password ??
-              data
-                .must_change_password
+            data.must_change_password
           )
       };
 
@@ -192,6 +210,11 @@ export default function Login() {
         String(
           Date.now()
         )
+      );
+
+      localStorage.setItem(
+        "language",
+        language
       );
 
       if (
@@ -217,7 +240,7 @@ export default function Login() {
     } catch (err) {
       setError(
         err?.message ||
-          t.error
+        t.error
       );
     } finally {
       setLoading(false);
@@ -236,7 +259,7 @@ export default function Login() {
                 : ""
             }`}
             onClick={() =>
-              changeLanguage(
+              handleLanguageChange(
                 "en"
               )
             }
@@ -259,7 +282,7 @@ export default function Login() {
                 : ""
             }`}
             onClick={() =>
-              changeLanguage(
+              handleLanguageChange(
                 "mn"
               )
             }
@@ -329,9 +352,6 @@ export default function Login() {
                 event.target
                   .value
               )
-            }
-            placeholder={
-              t.emailPlaceholder
             }
             autoComplete="email"
             required
