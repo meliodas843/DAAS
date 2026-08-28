@@ -1,7 +1,16 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { useDashboard } from "../context/DashboardContext";
-import { useAuth } from "../context/AuthContext";
+import {
+  Navigate,
+  useNavigate
+} from "react-router-dom";
+
+import {
+  useDashboard
+} from "../context/DashboardContext";
+
+import {
+  useAuth
+} from "../context/AuthContext";
 
 const API =
   import.meta.env.VITE_API_URL ||
@@ -9,21 +18,43 @@ const API =
 
 const translations = {
   mn: {
-    login: "Нэвтрэх",
-    subtitle: "Удирдлагын самбарт нэвтрэх",
-    email: "И-мэйл",
-    password: "Нууц үг",
-    loading: "Нэвтэрч байна...",
-    error: "Нэвтрэхэд алдаа гарлаа"
+    login:
+      "Нэвтрэх",
+
+    subtitle:
+      "Удирдлагын самбарт нэвтрэх",
+
+    email:
+      "И-мэйл",
+
+    password:
+      "Нууц үг",
+
+    loading:
+      "Нэвтэрч байна...",
+
+    error:
+      "Нэвтрэхэд алдаа гарлаа"
   },
 
   en: {
-    login: "Login",
-    subtitle: "Sign in to the dashboard",
-    email: "Email",
-    password: "Password",
-    loading: "Signing in...",
-    error: "Failed to sign in"
+    login:
+      "Login",
+
+    subtitle:
+      "Sign in to the dashboard",
+
+    email:
+      "Email",
+
+    password:
+      "Password",
+
+    loading:
+      "Signing in...",
+
+    error:
+      "Failed to sign in"
   }
 };
 
@@ -31,7 +62,9 @@ function getRemainingAttemptsFromMessage(
   message
 ) {
   const value =
-    String(message || "").trim();
+    String(
+      message || ""
+    ).trim();
 
   const match =
     value.match(
@@ -43,9 +76,13 @@ function getRemainingAttemptsFromMessage(
   }
 
   const remaining =
-    Number(match[1]);
+    Number(
+      match[1]
+    );
 
-  return Number.isFinite(remaining)
+  return Number.isFinite(
+    remaining
+  )
     ? remaining
     : null;
 }
@@ -54,13 +91,21 @@ function getEnglishRemainingMessage(
   remaining
 ) {
   const count =
-    Number(remaining);
+    Number(
+      remaining
+    );
 
-  if (!Number.isFinite(count)) {
+  if (
+    !Number.isFinite(
+      count
+    )
+  ) {
     return null;
   }
 
-  if (count === 1) {
+  if (
+    count === 1
+  ) {
     return (
       "Incorrect email or password. " +
       "1 attempt remaining"
@@ -79,9 +124,13 @@ function translateLoginError(
   remainingAttempts = null
 ) {
   const value =
-    String(message || "").trim();
+    String(
+      message || ""
+    ).trim();
 
-  if (language !== "en") {
+  if (
+    language !== "en"
+  ) {
     return value;
   }
 
@@ -94,7 +143,9 @@ function translateLoginError(
         remainingAttempts
       );
 
-    if (remainingMessage) {
+    if (
+      remainingMessage
+    ) {
       return remainingMessage;
     }
   }
@@ -126,7 +177,28 @@ function translateLoginError(
       "Too many login attempts. Please wait a moment and try again.",
 
     "Хэрэглэгч идэвхгүй байна":
-      "User is inactive"
+      "User is inactive",
+
+    "Шинэ нууц үг хуучин нууц үгтэй ижил байж болохгүй":
+      "New password cannot be the same as the old password",
+
+    "Одоогийн нууц үг буруу байна":
+      "Current password is incorrect",
+
+    "Нууц үг таарахгүй байна":
+      "Passwords do not match",
+
+    "Одоогийн нууц үгээ оруулна уу":
+      "Please enter your current password",
+
+    "Шинэ нууц үгээ оруулна уу":
+      "Please enter a new password",
+
+    "Нууц үг хамгийн багадаа 10 тэмдэгт, том үсэг, жижиг үсэг, тоо болон тусгай тэмдэг агуулсан байна":
+      "Password must be at least 10 characters and include uppercase, lowercase, a number, and a special character",
+
+    "Нууц үг амжилттай шинэчлэгдлээ":
+      "Password updated successfully"
   };
 
   return (
@@ -143,35 +215,43 @@ export default function Login() {
     login,
     authenticated,
     user
-  } = useAuth();
+  } =
+    useAuth();
 
   const {
     language,
     setLanguage
-  } = useDashboard();
+  } =
+    useDashboard();
 
   const [
     email,
     setEmail
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     password,
     setPassword
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     error,
     setError
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     loading,
     setLoading
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const t =
-    translations[language] ||
+    translations[
+      language
+    ] ||
     translations.mn;
 
   function handleLanguageChange(
@@ -189,7 +269,9 @@ export default function Login() {
     setError("");
   }
 
-  if (authenticated) {
+  if (
+    authenticated
+  ) {
     if (
       user?.must_change_password ===
       true
@@ -216,14 +298,18 @@ export default function Login() {
     event.preventDefault();
 
     try {
-      setLoading(true);
+      setLoading(
+        true
+      );
+
       setError("");
 
       const response =
         await fetch(
           `${API}/auth/login`,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -231,27 +317,33 @@ export default function Login() {
             },
 
             body:
-              JSON.stringify({
-                email:
-                  email
-                    .trim()
-                    .toLowerCase(),
+              JSON.stringify(
+                {
+                  email:
+                    email
+                      .trim()
+                      .toLowerCase(),
 
-                password
-              })
+                  password
+                }
+              )
           }
         );
 
-      let data = null;
+      let data =
+        null;
 
       try {
         data =
           await response.json();
       } catch {
-        data = null;
+        data =
+          null;
       }
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         const backendMessage =
           data?.message ||
           t.error;
@@ -279,7 +371,7 @@ export default function Login() {
           Boolean(
             data.user
               ?.must_change_password ??
-            data.must_change_password
+              data.must_change_password
           )
       };
 
@@ -290,7 +382,9 @@ export default function Login() {
 
       localStorage.setItem(
         "last_activity_at",
-        String(Date.now())
+        String(
+          Date.now()
+        )
       );
 
       localStorage.setItem(
@@ -304,7 +398,8 @@ export default function Login() {
         navigate(
           "/change-password",
           {
-            replace: true
+            replace:
+              true
           }
         );
 
@@ -314,16 +409,21 @@ export default function Login() {
       navigate(
         "/",
         {
-          replace: true
+          replace:
+            true
         }
       );
-    } catch (err) {
+    } catch (
+      err
+    ) {
       setError(
         err?.message ||
         t.error
       );
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
@@ -400,7 +500,9 @@ export default function Login() {
 
         <form
           className="login-form"
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
         >
           <h1>
             {t.login}
@@ -422,8 +524,12 @@ export default function Login() {
 
           <input
             type="email"
-            value={email}
-            onChange={(event) =>
+            value={
+              email
+            }
+            onChange={(
+              event
+            ) =>
               setEmail(
                 event.target.value
               )
@@ -438,8 +544,12 @@ export default function Login() {
 
           <input
             type="password"
-            value={password}
-            onChange={(event) =>
+            value={
+              password
+            }
+            onChange={(
+              event
+            ) =>
               setPassword(
                 event.target.value
               )
@@ -450,7 +560,9 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={
+              loading
+            }
           >
             {loading
               ? t.loading

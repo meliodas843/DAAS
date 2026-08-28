@@ -515,7 +515,7 @@ function ExpenseGroupChart({
 
               <Bar
                 dataKey="value"
-                fill="#2966e8"
+                fill="#ff8c00"
                 barSize={
                   15
                 }
@@ -1229,8 +1229,8 @@ export default function RevenueExpense() {
   const combinedColor =
     viewType ===
     "revenue"
-      ? "#43d77b"
-      : "#2966e8";
+      ? "#2966e8"
+      : "#ff8c00";
 
   const combinedYAxisWidth =
     viewType ===
