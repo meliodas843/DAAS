@@ -297,10 +297,7 @@ export default function Receivables() {
       ? t.byBranch
       : t.byAccount;
 
-  const yAxisWidth =
-    viewType === "branch"
-      ? 195
-      : 210;
+  const yAxisWidth = 210;
 
   return (
     <div className="receivables-layout">
@@ -390,12 +387,6 @@ export default function Receivables() {
               }
               valueLabel={
                 t.amount
-              }
-              tickMode={
-                viewType ===
-                "branch"
-                  ? "spaced"
-                  : "default"
               }
             />
           </div>

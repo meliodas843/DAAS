@@ -386,7 +386,7 @@ function CollectionChart({
             top: 28,
             left: 0,
             right: 25,
-            bottom: 10
+            bottom: 32
           }}
         >
           <CartesianGrid
@@ -399,6 +399,7 @@ function CollectionChart({
             dataKey="month"
             axisLine={false}
             tickLine={false}
+            tickMargin={24}
             tick={{
               fill: "#8796ad",
               fontSize: 10
@@ -410,11 +411,13 @@ function CollectionChart({
               0,
               yMax
             ]}
+            width={34}
             axisLine={false}
             tickLine={false}
             tick={{
               fill: "#8796ad",
-              fontSize: 10
+              fontSize: 10,
+              dy: -2
             }}
             tickFormatter={(
               value
@@ -653,7 +656,7 @@ function FinancialChart({
             top: 34,
             left: 0,
             right: 18,
-            bottom: 5
+            bottom: 14
           }}
           barGap={12}
           barCategoryGap="28%"
@@ -668,7 +671,7 @@ function FinancialChart({
             dataKey="month"
             axisLine={false}
             tickLine={false}
-            tickMargin={8}
+            tickMargin={12}
             tick={{
               fill: "#8796ad",
               fontSize: 10
@@ -676,11 +679,13 @@ function FinancialChart({
           />
 
           <YAxis
+            width={46}
             axisLine={false}
             tickLine={false}
             tick={{
               fill: "#8796ad",
-              fontSize: 10
+              fontSize: 10,
+              dy: -2
             }}
             tickFormatter={(
               value

@@ -9,484 +9,152 @@ import {
 } from "recharts";
 
 import HoverScroll from "./HoverScroll";
+import ChartCategoryTick from "./ChartCategoryTick";
+import { formatCompact, formatTooltip } from "./chartFormat";
+import {
+  CHART_COLOR,
+  CHART_BAR,
+  CHART_GAP,
+  CHART_FONT,
+  CHART_ANIMATION,
+  CHART_ROW
+} from "./chartTheme";
 
-function formatCompact(value) {
-  const number =
-    Number(value || 0);
+// Rounds only the corners on one side of the rect, leaving the other side
+// square. Used so each bar rounds off only its "far" end (away from the
+// zero baseline) — same convention as HorizontalBarChart's radius=[0,r,r,0].
+function roundedRectPath(x, y, width, height, radius, roundLeft, roundRight) {
+  const r = Math.max(0, Math.min(radius, height / 2, width));
+  const left = x;
+  const right = x + width;
+  const top = y;
+  const bottom = y + height;
 
-  const absolute =
-    Math.abs(number);
+  const tl = roundLeft ? r : 0;
+  const bl = roundLeft ? r : 0;
+  const tr = roundRight ? r : 0;
+  const br = roundRight ? r : 0;
 
-  const sign =
-    number < 0
-      ? "-"
-      : "";
-
-  if (
-    absolute >=
-    1_000_000_000
-  ) {
-    const result =
-      absolute /
-      1_000_000_000;
-
-    return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
-    }B`;
-  }
-
-  if (
-    absolute >=
-    1_000_000
-  ) {
-    const result =
-      absolute /
-      1_000_000;
-
-    return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
-    }M`;
-  }
-
-  if (
-    absolute >=
-    1_000
-  ) {
-    const result =
-      absolute /
-      1_000;
-
-    return `${sign}${
-      Number.isInteger(result)
-        ? result.toFixed(0)
-        : result.toFixed(1)
-    }K`;
-  }
-
-  return `${Math.round(
-    number
-  )}`;
-}
-
-function formatTooltip(value) {
-  const number =
-    Number(value || 0);
-
-  return `₮${Math.round(
-    number
-  ).toLocaleString(
-    "en-US"
-  )}`;
+  return `
+    M ${left + tl} ${top}
+    L ${right - tr} ${top}
+    Q ${right} ${top} ${right} ${top + tr}
+    L ${right} ${bottom - br}
+    Q ${right} ${bottom} ${right - br} ${bottom}
+    L ${left + bl} ${bottom}
+    Q ${left} ${bottom} ${left} ${bottom - bl}
+    L ${left} ${top + tl}
+    Q ${left} ${top} ${left + tl} ${top}
+    Z
+  `;
 }
 
 function CustomBarShape(props) {
-  const {
-    x = 0,
-    y = 0,
-    width = 0,
-    height = 0,
-    payload
-  } = props;
+  const { x = 0, y = 0, width = 0, height = 0, payload } = props;
+  const value = Number(payload?.value || 0);
 
-  const value =
-    Number(
-      payload?.value ||
-        0
-    );
+  if (!Number.isFinite(value) || value === 0) return null;
 
-  if (
-    !Number.isFinite(
-      value
-    ) ||
-    value === 0
-  ) {
-    return null;
-  }
+  const negative = value < 0;
+  const barFill = negative ? CHART_COLOR.negative : CHART_COLOR.positive;
+  const labelFill = negative ? CHART_COLOR.negative : CHART_COLOR.label;
 
-  const negative =
-    value < 0;
+  const actualWidth = Math.max(Math.abs(width), 2);
+  const rectX = negative ? x + width : x;
+  const centerY = y + height / 2;
+  const labelX = negative ? rectX - 12 : rectX + actualWidth + 12;
 
-  const fill =
-    negative
-      ? "#e1262c"
-      : "#2966e8";
-
-  const actualWidth =
-    Math.max(
-      Math.abs(width),
-      2
-    );
-
-  const rectX =
-    negative
-      ? x + width
-      : x;
-
-  const centerY =
-    y +
-    height / 2;
-
-  const labelX =
-    negative
-      ? rectX - 12
-      : rectX +
-        actualWidth +
-        12;
+  const path = roundedRectPath(rectX, y, actualWidth, height, CHART_BAR.radius, negative, !negative);
 
   return (
     <g>
-      <rect
-        x={rectX}
-        y={y}
-        width={
-          actualWidth
-        }
-        height={
-          height
-        }
-        rx={5}
-        ry={5}
-        fill={
-          fill
-        }
-      />
-
+      <path d={path} fill={barFill} />
       <text
-        x={
-          labelX
-        }
-        y={
-          centerY
-        }
+        x={labelX}
+        y={centerY}
         dominantBaseline="middle"
-        textAnchor={
-          negative
-            ? "end"
-            : "start"
-        }
-        fill={
-          negative
-            ? "#dc2626"
-            : "#101827"
-        }
-        fontSize={
-          10.5
-        }
-        fontWeight={
-          800
-        }
+        textAnchor={negative ? "end" : "start"}
+        fill={labelFill}
+        fontSize={CHART_FONT.label.fontSize}
+        fontWeight={CHART_FONT.label.fontWeight}
       >
-        {formatCompact(
-          value
-        )}
+        {formatCompact(value)}
       </text>
     </g>
   );
 }
 
-function CustomYAxisTick(
-  props
-) {
-  const {
-    x = 0,
-    y = 0,
-    payload
-  } = props;
+function calculateAxis(data) {
+  const values = data.map((item) => Number(item.value || 0));
+  const minValue = Math.min(...values, 0);
+  const maxValue = Math.max(...values, 0);
+  const maxAbsolute = Math.max(Math.abs(minValue), Math.abs(maxValue), 1);
 
-  return (
-    <text
-      x={
-        Number(x) - 30
-      }
-      y={
-        Number(y)
-      }
-      dy={3}
-      textAnchor="end"
-      fill="#536177"
-      fontSize={10}
-      fontWeight={500}
-    >
-      {
-        payload?.value ||
-        ""
-      }
-    </text>
-  );
+  let step = 500_000_000;
+  if (maxAbsolute > 2_000_000_000) step = 1_000_000_000;
+
+  const paddedMaximum = maxAbsolute * 1.18;
+  const edge = Math.ceil(paddedMaximum / step) * step;
+
+  return { min: -edge, max: edge, step };
 }
 
-function calculateAxis(
-  data
-) {
-  const values =
-    data.map(
-      (item) =>
-        Number(
-          item.value ||
-            0
-        )
-    );
-
-  const minValue =
-    Math.min(
-      ...values,
-      0
-    );
-
-  const maxValue =
-    Math.max(
-      ...values,
-      0
-    );
-
-  const maxAbsolute =
-    Math.max(
-      Math.abs(
-        minValue
-      ),
-      Math.abs(
-        maxValue
-      ),
-      1
-    );
-
-  let step =
-    500_000_000;
-
-  if (
-    maxAbsolute >
-    2_000_000_000
-  ) {
-    step =
-      1_000_000_000;
-  }
-
-  const paddedMaximum =
-    maxAbsolute *
-    1.18;
-
-  const edge =
-    Math.ceil(
-      paddedMaximum /
-        step
-    ) *
-    step;
-
-  return {
-    min:
-      -edge,
-    max:
-      edge,
-    step
-  };
-}
-
-function createTicks(
-  min,
-  max,
-  step
-) {
+function createTicks(min, max, step) {
   const ticks = [];
-
-  for (
-    let value = min;
-    value <= max;
-    value += step
-  ) {
-    ticks.push(
-      value
-    );
+  for (let value = min; value <= max; value += step) {
+    ticks.push(value);
   }
-
   return ticks;
 }
 
-export default function ChangeBarChart({
-  data = [],
-  language = "mn",
-  valueLabel
-}) {
-  const tooltipLabel =
-    valueLabel ||
-    (
-      language === "en"
-        ? "Change"
-        : "Өөрчлөлт"
-    );
+export default function ChangeBarChart({ data = [], language = "mn", valueLabel, yAxisWidth = 90 }) {
+  const tooltipLabel = valueLabel || (language === "en" ? "Change" : "Өөрчлөлт");
 
-  const safeData =
-    Array.isArray(data)
-      ? data.map(
-          (item) => ({
-            ...item,
+  const safeData = Array.isArray(data)
+    ? data.map((item) => ({ ...item, value: Number(item.value || 0) }))
+    : [];
 
-            value:
-              Number(
-                item.value ||
-                  0
-              )
-          })
-        )
-      : [];
+  const { min: axisMin, max: axisMax, step: axisStep } = calculateAxis(safeData);
+  const axisTicks = createTicks(axisMin, axisMax, axisStep);
 
-  const {
-    min: axisMin,
-    max: axisMax,
-    step: axisStep
-  } =
-    calculateAxis(
-      safeData
-    );
+  const chartLeftMargin = 0;
+  const chartRightMargin = 65;
+  const bottomAxisRightMargin = 45;
+  const visibleHeight = 285;
 
-  const axisTicks =
-    createTicks(
-      axisMin,
-      axisMax,
-      axisStep
-    );
-
-  const yAxisWidth =
-    135;
-
-  const chartLeftMargin =
-    0;
-
-  const chartRightMargin =
-    65;
-
-  const bottomAxisRightMargin =
-    45;
-
-  const visibleHeight =
-    285;
-
-  const rowHeight =
-    56;
-
-  const chartHeight =
-    Math.max(
-      visibleHeight + 1,
-      safeData.length *
-        rowHeight +
-        12
-    );
+  const chartHeight = Math.max(visibleHeight + 1, safeData.length * CHART_ROW.height + 12);
 
   return (
     <div className="change-bar-chart">
-      <HoverScroll
-        direction="vertical"
-        className="change-bar-hover-scroll"
-      >
-        <div
-          className="change-bar-chart-main"
-          style={{
-            height:
-              `${chartHeight}px`
-          }}
-        >
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+      <HoverScroll direction="vertical" className="change-bar-hover-scroll">
+        <div className="change-bar-chart-main" style={{ height: `${chartHeight}px` }}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={
-                safeData
-              }
+              data={safeData}
               layout="vertical"
-              margin={{
-                top: 5,
-
-                right:
-                  chartRightMargin,
-
-                bottom: 0,
-
-                left:
-                  chartLeftMargin
-              }}
-              barCategoryGap={
-                16
-              }
+              margin={{ top: 5, right: chartRightMargin, bottom: 0, left: chartLeftMargin }}
+              barCategoryGap={CHART_GAP.categoryPx}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                horizontal={
-                  false
-                }
-                stroke="#edf1f7"
-              />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_COLOR.grid} />
 
-              <XAxis
-                type="number"
-                domain={[
-                  axisMin,
-                  axisMax
-                ]}
-                hide
-                allowDataOverflow={
-                  false
-                }
-              />
+              <XAxis type="number" domain={[axisMin, axisMax]} hide allowDataOverflow={false} />
 
               <YAxis
                 type="category"
                 dataKey="name"
-                width={
-                  yAxisWidth
-                }
-                axisLine={
-                  false
-                }
-                tickLine={
-                  false
-                }
-                interval={
-                  0
-                }
-                tick={
-                  <CustomYAxisTick />
-                }
+                width={yAxisWidth}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+                tick={<ChartCategoryTick offset={14} maxLength={16} />}
               />
 
               <Tooltip
-                cursor={{
-                  fill:
-                    "rgba(15, 23, 42, 0.025)"
-                }}
-                formatter={(
-                  value
-                ) => [
-                  formatTooltip(
-                    value
-                  ),
-
-                  tooltipLabel
-                ]}
+                cursor={{ fill: CHART_COLOR.tooltipCursor }}
+                formatter={(value) => [formatTooltip(value), tooltipLabel]}
               />
 
-              <Bar
-                dataKey="value"
-                barSize={
-                  22
-                }
-                shape={
-                  <CustomBarShape />
-                }
-                isAnimationActive={
-                  true
-                }
-                animationBegin={
-                  100
-                }
-                animationDuration={
-                  1000
-                }
-                animationEasing="ease-out"
-              />
+              <Bar dataKey="value" barSize={CHART_BAR.size} shape={<CustomBarShape />} {...CHART_ANIMATION} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -496,49 +164,19 @@ export default function ChangeBarChart({
         <div
           className="shared-bottom-axis-track"
           style={{
-            marginLeft:
-              `${
-                yAxisWidth +
-                chartLeftMargin
-              }px`,
-
-            marginRight:
-              `${bottomAxisRightMargin}px`
+            marginLeft: `${yAxisWidth + chartLeftMargin}px`,
+            marginRight: `${bottomAxisRightMargin}px`
           }}
         >
-          {axisTicks.map(
-            (tick) => {
-              const position =
-                (
-                  (
-                    tick -
-                    axisMin
-                  ) /
-                  (
-                    axisMax -
-                    axisMin
-                  )
-                ) *
-                100;
+          {axisTicks.map((tick) => {
+            const position = ((tick - axisMin) / (axisMax - axisMin)) * 100;
 
-              return (
-                <span
-                  key={
-                    tick
-                  }
-                  className="shared-bottom-axis-tick"
-                  style={{
-                    left:
-                      `${position}%`
-                  }}
-                >
-                  {formatCompact(
-                    tick
-                  )}
-                </span>
-              );
-            }
-          )}
+            return (
+              <span key={tick} className="shared-bottom-axis-tick" style={{ left: `${position}%` }}>
+                {formatCompact(tick)}
+              </span>
+            );
+          })}
         </div>
       </div>
     </div>

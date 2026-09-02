@@ -178,7 +178,9 @@ input {
 
 .side-nav-label {
   min-width: 0;
-  font-size: 14px;
+  font-size: 12.5px;
+  overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
@@ -1360,7 +1362,7 @@ input {
   display: grid;
 
   grid-template-columns:
-    minmax(0, 1.5fr)
+    minmax(0, 1.1fr)
     minmax(380px, 1fr);
 
   gap: 16px;
@@ -5410,7 +5412,7 @@ span:last-child {
   width: 100%;
   display: grid;
   grid-template-columns:
-    minmax(0, 1.5fr)
+    minmax(0, 1fr)
     minmax(380px, 1fr);
   gap: 16px;
   align-items: stretch;
@@ -5684,7 +5686,7 @@ span:last-child {
   width: 100%;
   display: grid;
   grid-template-columns:
-    minmax(0, 1.5fr)
+    minmax(0, 1fr)
     minmax(380px, 1fr);
   gap: 16px;
   align-items: stretch;
@@ -6627,7 +6629,7 @@ span:last-child {
   width: 100%;
   display: grid;
   grid-template-columns:
-    minmax(0, 1.5fr)
+    minmax(0, 1.1fr)
     minmax(380px, 1fr);
   gap: 16px;
   align-items: stretch;
