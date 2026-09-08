@@ -4,186 +4,311 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState
+  useState,
 } from "react";
 
 const AuthContext =
   createContext(null);
 
-const TOKEN_KEY =
-  "admin_token";
-
 const API =
-  import.meta.env
-    .VITE_API_URL ||
+  import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
+const SESSION_MARKER =
+  "auth_session";
+
+const LAST_ACTIVITY_KEY =
+  "last_activity_at";
+
+function normalizeUser(
+  user
+) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    ...user,
+
+    id:
+      Number(
+        user.id
+      ),
+
+    role:
+      String(
+        user.role ||
+        "viewer"
+      )
+        .trim()
+        .toLowerCase(),
+
+    must_change_password:
+      Boolean(
+        user.must_change_password
+      ),
+
+    is_active:
+      Boolean(
+        user.is_active
+      ),
+
+    is_blocked:
+      Boolean(
+        user.is_blocked
+      ),
+
+    failed_login_attempts:
+      Number(
+        user.failed_login_attempts ||
+        0
+      ),
+  };
+}
+
 export function AuthProvider({
-  children
+  children,
 }) {
   const [
-    token,
-    setToken
-  ] = useState(() =>
-    localStorage.getItem(
-      TOKEN_KEY
-    )
-  );
-
-  const [
     user,
-    setUser
-  ] = useState(null);
+    setUser,
+  ] =
+    useState(null);
 
   const [
     loading,
-    setLoading
-  ] = useState(
-    Boolean(token)
-  );
+    setLoading,
+  ] =
+    useState(true);
 
   const clearAuth =
     useCallback(() => {
-      localStorage.removeItem(
-        TOKEN_KEY
+      setUser(
+        null
       );
 
-      setToken(null);
-      setUser(null);
+      localStorage.removeItem(
+        SESSION_MARKER
+      );
+
+      localStorage.removeItem(
+        LAST_ACTIVITY_KEY
+      );
     }, []);
+
+  const login =
+    useCallback(
+      (
+        nextUser
+      ) => {
+        const normalized =
+          normalizeUser(
+            nextUser
+          );
+
+        if (!normalized) {
+          clearAuth();
+
+          return;
+        }
+
+        setUser(
+          normalized
+        );
+
+        localStorage.setItem(
+          SESSION_MARKER,
+          "1"
+        );
+
+        localStorage.setItem(
+          LAST_ACTIVITY_KEY,
+          String(
+            Date.now()
+          )
+        );
+      },
+      [
+        clearAuth,
+      ]
+    );
 
   const refreshUser =
     useCallback(
-      async (
-        activeToken =
-          token
-      ) => {
-        if (!activeToken) {
-          setUser(null);
-          setLoading(false);
-          return null;
-        }
-
+      async () => {
         try {
           const response =
             await fetch(
               `${API}/auth/me`,
               {
+                method:
+                  "GET",
+
+                credentials:
+                  "include",
+
                 headers: {
-                  Authorization:
-                    `Bearer ${activeToken}`
-                }
+                  Accept:
+                    "application/json",
+                },
               }
             );
 
-          const data =
-            await response.json();
+          let data =
+            null;
+
+          try {
+            data =
+              await response.json();
+          } catch {
+            data =
+              null;
+          }
 
           if (
-            !response.ok
+            !response.ok ||
+            !data?.user
           ) {
             clearAuth();
+
             return null;
           }
 
+          const nextUser =
+            normalizeUser(
+              data.user
+            );
+
           setUser(
-            data.user
+            nextUser
           );
 
-          return data.user;
+          localStorage.setItem(
+            SESSION_MARKER,
+            "1"
+          );
+
+          return nextUser;
         } catch {
           clearAuth();
+
           return null;
-        } finally {
-          setLoading(false);
         }
       },
       [
-        token,
-        clearAuth
+        clearAuth,
+      ]
+    );
+
+  const logout =
+    useCallback(
+      async () => {
+        try {
+          await fetch(
+            `${API}/auth/logout`,
+            {
+              method:
+                "POST",
+
+              credentials:
+                "include",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+        } catch {
+        } finally {
+          clearAuth();
+        }
+      },
+      [
+        clearAuth,
       ]
     );
 
   useEffect(() => {
-    refreshUser();
-  }, [
-    refreshUser
-  ]);
+    let cancelled =
+      false;
 
-  function login(
-    nextToken,
-    nextUser
-  ) {
-    localStorage.setItem(
-      TOKEN_KEY,
-      nextToken
-    );
+    async function initialize() {
+      const marker =
+        localStorage.getItem(
+          SESSION_MARKER
+        );
 
-    setToken(
-      nextToken
-    );
-
-    setUser(
-      nextUser ||
-        null
-    );
-
-    setLoading(false);
-  }
-
-  async function logout() {
-    const currentToken =
-      token;
-
-    clearAuth();
-
-    if (
-      !currentToken
-    ) {
-      return;
-    }
-
-    try {
-      await fetch(
-        `${API}/auth/logout`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              `Bearer ${currentToken}`
-          }
+      if (
+        marker !== "1"
+      ) {
+        if (
+          !cancelled
+        ) {
+          setLoading(
+            false
+          );
         }
-      );
-    } catch {
+
+        return;
+      }
+
+      await refreshUser();
+
+      if (
+        !cancelled
+      ) {
+        setLoading(
+          false
+        );
+      }
     }
-  }
+
+    initialize();
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, [
+    refreshUser,
+  ]);
 
   const value =
     useMemo(
       () => ({
-        token,
         user,
+
         loading,
+
         authenticated:
           Boolean(
-            token &&
-              user
+            user
           ),
+
         login,
+
         logout,
-        refreshUser
+
+        refreshUser,
+
+        clearAuth,
       }),
       [
-        token,
         user,
         loading,
-        refreshUser
+        login,
+        logout,
+        refreshUser,
+        clearAuth,
       ]
     );
 
   return (
     <AuthContext.Provider
-      value={value}
+      value={
+        value
+      }
     >
       {children}
     </AuthContext.Provider>
@@ -191,7 +316,16 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  return useContext(
-    AuthContext
-  );
+  const context =
+    useContext(
+      AuthContext
+    );
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
+  }
+
+  return context;
 }

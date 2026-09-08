@@ -223,9 +223,7 @@ const translations = {
 };
 
 export default function Help() {
-  const {
-    token
-  } = useAuth();
+  useAuth();
 
   const {
     language
@@ -332,10 +330,6 @@ export default function Help() {
   const loadRequests =
     useCallback(
       async () => {
-        if (!token) {
-          return;
-        }
-
         try {
           setLoading(
             true
@@ -347,12 +341,12 @@ export default function Help() {
             await fetch(
               `${API}/support`,
               {
+                credentials:
+                  "include",
+
                 headers: {
                   Accept:
-                    "application/json",
-
-                  Authorization:
-                    `Bearer ${token}`
+                    "application/json"
                 }
               }
             );
@@ -410,7 +404,6 @@ export default function Help() {
         }
       },
       [
-        token,
         t.loadError
       ]
     );
@@ -703,12 +696,12 @@ export default function Help() {
             method:
               "POST",
 
+            credentials:
+              "include",
+
             headers: {
               Accept:
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`
+                "application/json"
             },
 
             body:

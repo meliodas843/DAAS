@@ -40,7 +40,6 @@ function isStrongPassword(password) {
 
 export default function Users() {
   const {
-    token,
     user
   } = useAuth();
 
@@ -341,10 +340,6 @@ export default function Users() {
   const loadUsers =
     useCallback(
       async () => {
-        if (!token) {
-          return;
-        }
-
         try {
           setLoading(true);
           setError("");
@@ -353,11 +348,12 @@ export default function Users() {
             await fetch(
               `${API}/users`,
               {
+                credentials:
+                  "include",
+
                 headers: {
                   Accept:
-                    "application/json",
-                  Authorization:
-                    `Bearer ${token}`
+                    "application/json"
                 }
               }
             );
@@ -430,7 +426,6 @@ export default function Users() {
         }
       },
       [
-        token,
         t.loadError
       ]
     );
@@ -547,15 +542,15 @@ export default function Users() {
         {
           method: "POST",
 
+          credentials:
+            "include",
+
           headers: {
             Accept:
               "application/json",
 
             "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${token}`
+              "application/json"
           },
 
           body:
@@ -633,15 +628,15 @@ export default function Users() {
         {
           method: "POST",
 
+          credentials:
+            "include",
+
           headers: {
             Accept:
               "application/json",
 
             "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${token}`
+              "application/json"
           },
 
           body:
@@ -716,15 +711,15 @@ export default function Users() {
           {
             method: "PATCH",
 
+            credentials:
+              "include",
+
             headers: {
               Accept:
                 "application/json",
 
               "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`
+                "application/json"
             },
 
             body:
@@ -831,12 +826,12 @@ export default function Users() {
           {
             method: "DELETE",
 
+            credentials:
+              "include",
+
             headers: {
               Accept:
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`
+                "application/json"
             }
           }
         );

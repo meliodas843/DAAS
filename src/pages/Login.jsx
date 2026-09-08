@@ -1,15 +1,18 @@
-import { useState } from "react";
+import {
+  useState,
+} from "react";
+
 import {
   Navigate,
-  useNavigate
+  useNavigate,
 } from "react-router-dom";
 
 import {
-  useDashboard
+  useDashboard,
 } from "../context/DashboardContext";
 
 import {
-  useAuth
+  useAuth,
 } from "../context/AuthContext";
 
 const API =
@@ -34,7 +37,7 @@ const translations = {
       "Нэвтэрч байна...",
 
     error:
-      "Нэвтрэхэд алдаа гарлаа"
+      "Нэвтрэхэд алдаа гарлаа",
   },
 
   en: {
@@ -54,8 +57,8 @@ const translations = {
       "Signing in...",
 
     error:
-      "Failed to sign in"
-  }
+      "Failed to sign in",
+  },
 };
 
 function getRemainingAttemptsFromMessage(
@@ -198,12 +201,19 @@ function translateLoginError(
       "Password must be at least 10 characters and include uppercase, lowercase, a number, and a special character",
 
     "Нууц үг амжилттай шинэчлэгдлээ":
-      "Password updated successfully"
+      "Password updated successfully",
+
+    "Authentication required":
+      "Authentication required",
+
+    "Internal server error":
+      "Internal server error",
   };
 
   return (
     messages[value] ||
-    value
+    value ||
+    "Failed to sign in"
   );
 }
 
@@ -214,37 +224,37 @@ export default function Login() {
   const {
     login,
     authenticated,
-    user
+    user,
   } =
     useAuth();
 
   const {
     language,
-    setLanguage
+    setLanguage,
   } =
     useDashboard();
 
   const [
     email,
-    setEmail
+    setEmail,
   ] =
     useState("");
 
   const [
     password,
-    setPassword
+    setPassword,
   ] =
     useState("");
 
   const [
     error,
-    setError
+    setError,
   ] =
     useState("");
 
   const [
     loading,
-    setLoading
+    setLoading,
   ] =
     useState(false);
 
@@ -297,11 +307,28 @@ export default function Login() {
   ) {
     event.preventDefault();
 
-    try {
-      setLoading(
-        true
+    if (loading) {
+      return;
+    }
+
+    const cleanEmail =
+      email
+        .trim()
+        .toLowerCase();
+
+    if (
+      !cleanEmail ||
+      !password
+    ) {
+      setError(
+        t.error
       );
 
+      return;
+    }
+
+    try {
+      setLoading(true);
       setError("");
 
       const response =
@@ -311,22 +338,24 @@ export default function Login() {
             method:
               "POST",
 
+            credentials:
+              "include",
+
             headers: {
               "Content-Type":
-                "application/json"
+                "application/json",
+
+              Accept:
+                "application/json",
             },
 
             body:
-              JSON.stringify(
-                {
-                  email:
-                    email
-                      .trim()
-                      .toLowerCase(),
+              JSON.stringify({
+                email:
+                  cleanEmail,
 
-                  password
-                }
-              )
+                password,
+              }),
           }
         );
 
@@ -364,19 +393,57 @@ export default function Login() {
         );
       }
 
+      if (
+        !data?.user
+      ) {
+        throw new Error(
+          t.error
+        );
+      }
+
       const nextUser = {
         ...data.user,
+
+        id:
+          Number(
+            data.user.id
+          ),
+
+        role:
+          String(
+            data.user.role ||
+            "viewer"
+          )
+            .trim()
+            .toLowerCase(),
 
         must_change_password:
           Boolean(
             data.user
-              ?.must_change_password ??
-              data.must_change_password
-          )
+              ?.must_change_password
+          ),
+
+        is_active:
+          Boolean(
+            data.user
+              ?.is_active
+          ),
+
+        is_blocked:
+          Boolean(
+            data.user
+              ?.is_blocked
+          ),
+
+        failed_login_attempts:
+          Number(
+            data.user
+              ?.failed_login_attempts ||
+            0
+          ),
       };
 
       login(
-        data.token,
         nextUser
       );
 
@@ -393,13 +460,14 @@ export default function Login() {
       );
 
       if (
-        nextUser.must_change_password
+        nextUser
+          .must_change_password
       ) {
         navigate(
           "/change-password",
           {
             replace:
-              true
+              true,
           }
         );
 
@@ -410,7 +478,7 @@ export default function Login() {
         "/",
         {
           replace:
-            true
+            true,
         }
       );
     } catch (
@@ -430,7 +498,9 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-panel">
+
         <div className="login-language-switcher">
+
           <button
             type="button"
             className={`login-language-button ${
@@ -444,6 +514,7 @@ export default function Login() {
               )
             }
             aria-label="English"
+            disabled={loading}
           >
             <span className="login-language-flag">
               🇬🇧
@@ -467,6 +538,7 @@ export default function Login() {
               )
             }
             aria-label="Монгол"
+            disabled={loading}
           >
             <span className="login-language-flag">
               🇲🇳
@@ -476,9 +548,11 @@ export default function Login() {
               MN
             </span>
           </button>
+
         </div>
 
         <div className="login-brand">
+
           <div className="login-brand-icon">
             <img
               src="/misheel.jpeg"
@@ -496,6 +570,7 @@ export default function Login() {
               GROUP
             </span>
           </div>
+
         </div>
 
         <form
@@ -513,16 +588,22 @@ export default function Login() {
           </p>
 
           {error && (
-            <div className="login-error">
+            <div
+              className="login-error"
+              role="alert"
+            >
               {error}
             </div>
           )}
 
-          <label>
+          <label
+            htmlFor="login-email"
+          >
             {t.email}
           </label>
 
           <input
+            id="login-email"
             type="email"
             value={
               email
@@ -534,15 +615,22 @@ export default function Login() {
                 event.target.value
               )
             }
-            autoComplete="email"
+            autoComplete="username"
+            inputMode="email"
+            disabled={
+              loading
+            }
             required
           />
 
-          <label>
+          <label
+            htmlFor="login-password"
+          >
             {t.password}
           </label>
 
           <input
+            id="login-password"
             type="password"
             value={
               password
@@ -555,6 +643,9 @@ export default function Login() {
               )
             }
             autoComplete="current-password"
+            disabled={
+              loading
+            }
             required
           />
 
@@ -568,7 +659,9 @@ export default function Login() {
               ? t.loading
               : t.login}
           </button>
+
         </form>
+
       </div>
     </div>
   );

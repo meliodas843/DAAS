@@ -5,6 +5,9 @@ dotenv.config();
 import path from "path";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 import pool from "./db.js";
 
@@ -22,66 +25,113 @@ import supportRouter from "./routes/support.js";
 import {
   requireAuth,
   requirePasswordChanged,
-  requireFinancialAccess
+  requireFinancialAccess,
 } from "./middleware/auth.js";
 
 const app = express();
 
-const PORT = Number(
-  process.env.PORT ||
-    8000
-);
+const isProduction =
+  process.env.NODE_ENV === "production";
 
-app.disable(
-  "x-powered-by"
-);
+const frontendUrl =
+  process.env.FRONTEND_URL ||
+  (!isProduction
+    ? "http://localhost:5173"
+    : "");
 
-if (
-  process.env.NODE_ENV ===
-  "production"
-) {
-  app.set(
-    "trust proxy",
-    1
+if (!frontendUrl) {
+  throw new Error(
+    "FRONTEND_URL is required in production"
   );
 }
 
+const PORT =
+  Number(
+    process.env.PORT || 8000
+  );
+
+app.disable("x-powered-by");
+
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "same-site",
+    },
+  })
+);
+
 app.use(
   cors({
-    origin:
-      process.env.FRONTEND_URL ||
-      "http://localhost:5173",
-
+    origin: frontendUrl,
     credentials: true,
-
     methods: [
       "GET",
       "POST",
       "PATCH",
       "PUT",
       "DELETE",
-      "OPTIONS"
+      "OPTIONS",
     ],
-
     allowedHeaders: [
       "Content-Type",
-      "Authorization",
-      "Accept"
-    ]
+      "Accept",
+    ],
   })
 );
 
+app.use(cookieParser());
+
 app.use(
   express.json({
-    limit: "100kb"
+    limit: "100kb",
   })
 );
 
 app.use(
   express.urlencoded({
     extended: false,
-    limit: "100kb"
+    limit: "100kb",
   })
+);
+
+const apiLimiter =
+  rateLimit({
+    windowMs: 60_000,
+    limit: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: "Too many requests",
+    },
+  });
+
+const loginLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60_000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message:
+        "Хэт олон нэвтрэх оролдлого хийлээ. Түр хүлээгээд дахин оролдоно уу.",
+    },
+  });
+
+app.use(
+  "/api/auth/login",
+  loginLimiter
+);
+
+app.use(
+  "/api",
+  apiLimiter
 );
 
 app.use(
@@ -95,33 +145,31 @@ app.use(
       dotfiles: "deny",
       index: false,
       fallthrough: false,
-
-      setHeaders: (
-        res
-      ) => {
+      setHeaders: (res) => {
         res.setHeader(
           "X-Content-Type-Options",
           "nosniff"
         );
-      }
+
+        res.setHeader(
+          "Content-Disposition",
+          "attachment"
+        );
+      },
     }
   )
 );
 
 app.get(
   "/api/health",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     try {
       await pool.query(
         "SELECT 1"
       );
 
-      return res.json({
+      return res.status(200).json({
         success: true,
-        connected: true
       });
     } catch (error) {
       console.error(
@@ -129,11 +177,8 @@ app.get(
         error
       );
 
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
-        connected: false,
-        message:
-          "Database unavailable"
       });
     }
   }
@@ -154,10 +199,69 @@ app.use(
   supportRouter
 );
 
+app.use(
+  "/api",
+  (req, res, next) => {
+    const datePattern =
+      /^\d{4}-\d{2}-\d{2}$/;
+
+    for (const key of [
+      "date_from",
+      "date_to",
+    ]) {
+      const value =
+        req.query[key];
+
+      if (
+        value &&
+        !datePattern.test(
+          String(value)
+        )
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              `Invalid ${key} format`,
+          });
+      }
+    }
+
+    if (
+      req.query.branch_id &&
+      req.query.branch_id !==
+        "all"
+    ) {
+      const branchId =
+        Number(
+          req.query.branch_id
+        );
+
+      if (
+        !Number.isSafeInteger(
+          branchId
+        ) ||
+        branchId <= 0
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Invalid branch_id",
+          });
+      }
+    }
+
+    return next();
+  }
+);
+
 const financialGuards = [
   requireAuth,
   requirePasswordChanged,
-  requireFinancialAccess
+  requireFinancialAccess,
 ];
 
 app.use(
@@ -204,27 +308,23 @@ app.use(
 
 app.get(
   "/",
-  (
-    req,
-    res
-  ) => {
+  (req, res) => {
     return res.json({
       success: true,
       message:
-        "Misheel Dashboard API"
+        "Misheel Dashboard API",
     });
   }
 );
 
 app.use(
-  (
-    req,
-    res
-  ) => {
-    return res.status(404).json({
-      success: false,
-      message: "Not found"
-    });
+  (req, res) => {
+    return res
+      .status(404)
+      .json({
+        success: false,
+        message: "Not found",
+      });
   }
 );
 
@@ -240,17 +340,17 @@ app.use(
       error
     );
 
-    if (
-      res.headersSent
-    ) {
+    if (res.headersSent) {
       return next(error);
     }
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Internal server error"
-    });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message:
+          "Internal server error",
+      });
   }
 );
 

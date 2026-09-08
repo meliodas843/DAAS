@@ -1,92 +1,71 @@
 import express from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import {
+  fileURLToPath,
+} from "url";
 
 import pool from "../db.js";
 
 import {
   requireAuth,
-  requirePasswordChanged
+  requirePasswordChanged,
 } from "../middleware/auth.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-router.use(
-  requireAuth,
-  requirePasswordChanged
-);
+const __filename =
+  fileURLToPath(
+    import.meta.url
+  );
 
-const uploadDir =
-  path.join(
-    process.cwd(),
-    "uploads",
-    "support"
+const __dirname =
+  path.dirname(
+    __filename
+  );
+
+const uploadsDir =
+  path.resolve(
+    __dirname,
+    "../uploads"
   );
 
 fs.mkdirSync(
-  uploadDir,
+  uploadsDir,
   {
-    recursive: true
+    recursive:
+      true,
   }
 );
 
-const allowedMimeTypes =
+const MAX_FILE_SIZE =
+  10 *
+  1024 *
+  1024;
+
+const allowedClientMimeTypes =
   new Set([
     "image/jpeg",
     "image/png",
     "image/webp",
     "application/pdf",
-    "text/plain"
+    "text/plain",
   ]);
-
-const storage =
-  multer.diskStorage({
-    destination: (
-      req,
-      file,
-      callback
-    ) => {
-      callback(
-        null,
-        uploadDir
-      );
-    },
-
-    filename: (
-      req,
-      file,
-      callback
-    ) => {
-      const extension =
-        path
-          .extname(
-            file.originalname
-          )
-          .toLowerCase();
-
-      const name =
-        `${Date.now()}-${crypto.randomUUID()}${extension}`;
-
-      callback(
-        null,
-        name
-      );
-    }
-  });
 
 const upload =
   multer({
-    storage,
+    storage:
+      multer.memoryStorage(),
 
     limits: {
       fileSize:
-        10 *
-        1024 *
-        1024,
+        MAX_FILE_SIZE,
 
-      files: 1
+      files:
+        1,
     },
 
     fileFilter: (
@@ -95,7 +74,7 @@ const upload =
       callback
     ) => {
       if (
-        !allowedMimeTypes.has(
+        !allowedClientMimeTypes.has(
           file.mimetype
         )
       ) {
@@ -110,127 +89,418 @@ const upload =
         null,
         true
       );
-    }
+    },
   });
 
-const allowedTypes =
-  new Set([
-    "BUG",
-    "QUESTION",
-    "FEEDBACK",
-    "CHANGE_REQUEST"
-  ]);
-
-function removeUploadedFile(
-  file
+function detectFileType(
+  buffer
 ) {
   if (
-    !file?.path
+    !Buffer.isBuffer(
+      buffer
+    ) ||
+    buffer.length ===
+    0
+  ) {
+    return null;
+  }
+
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return {
+      mime:
+        "image/jpeg",
+
+      extension:
+        ".jpg",
+    };
+  }
+
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return {
+      mime:
+        "image/png",
+
+      extension:
+        ".png",
+    };
+  }
+
+  if (
+    buffer.length >= 12 &&
+    buffer
+      .subarray(
+        0,
+        4
+      )
+      .toString(
+        "ascii"
+      ) === "RIFF" &&
+    buffer
+      .subarray(
+        8,
+        12
+      )
+      .toString(
+        "ascii"
+      ) === "WEBP"
+  ) {
+    return {
+      mime:
+        "image/webp",
+
+      extension:
+        ".webp",
+    };
+  }
+
+  if (
+    buffer.length >= 5 &&
+    buffer
+      .subarray(
+        0,
+        5
+      )
+      .toString(
+        "ascii"
+      ) === "%PDF-"
+  ) {
+    return {
+      mime:
+        "application/pdf",
+
+      extension:
+        ".pdf",
+    };
+  }
+
+  if (
+    looksLikePlainText(
+      buffer
+    )
+  ) {
+    return {
+      mime:
+        "text/plain",
+
+      extension:
+        ".txt",
+    };
+  }
+
+  return null;
+}
+
+function looksLikePlainText(
+  buffer
+) {
+  const sample =
+    buffer.subarray(
+      0,
+      Math.min(
+        buffer.length,
+        8192
+      )
+    );
+
+  if (
+    sample.includes(
+      0x00
+    )
+  ) {
+    return false;
+  }
+
+  const decoded =
+    sample.toString(
+      "utf8"
+    );
+
+  if (
+    decoded.length ===
+    0
+  ) {
+    return true;
+  }
+
+  const replacementCharacters =
+    (
+      decoded.match(
+        /\uFFFD/g
+      ) ||
+      []
+    ).length;
+
+  return (
+    replacementCharacters /
+      decoded.length <
+    0.01
+  );
+}
+
+function cleanOriginalFileName(
+  value
+) {
+  return path
+    .basename(
+      String(
+        value ||
+        "attachment"
+      )
+    )
+    .replace(
+      /[\r\n]/g,
+      ""
+    )
+    .slice(
+      0,
+      255
+    );
+}
+
+async function persistValidatedFile(
+  file
+) {
+  if (!file) {
+    return null;
+  }
+
+  const detected =
+    detectFileType(
+      file.buffer
+    );
+
+  if (!detected) {
+    throw new Error(
+      "Unsupported or invalid file content"
+    );
+  }
+
+  if (
+    detected.mime !==
+    file.mimetype
+  ) {
+    throw new Error(
+      "File content does not match file type"
+    );
+  }
+
+  const generatedName =
+    `${Date.now()}-${crypto.randomUUID()}${detected.extension}`;
+
+  const absolutePath =
+    path.join(
+      uploadsDir,
+      generatedName
+    );
+
+  await fs.promises.writeFile(
+    absolutePath,
+    file.buffer,
+    {
+      flag:
+        "wx",
+    }
+  );
+
+  return {
+    fileName:
+      cleanOriginalFileName(
+        file.originalname
+      ),
+
+    filePath:
+      `/uploads/${generatedName}`,
+
+    storedFileName:
+      generatedName,
+
+    mimeType:
+      detected.mime,
+  };
+}
+
+function deleteStoredFile(
+  uploadedFile
+) {
+  if (
+    !uploadedFile
+      ?.storedFileName
   ) {
     return;
   }
 
-  try {
-    if (
-      fs.existsSync(
-        file.path
-      )
-    ) {
-      fs.unlinkSync(
-        file.path
-      );
-    }
-  } catch (error) {
-    console.error(
-      "SUPPORT FILE CLEANUP ERROR:",
-      error
+  const absolutePath =
+    path.join(
+      uploadsDir,
+      uploadedFile.storedFileName
     );
-  }
+
+  fs.promises
+    .unlink(
+      absolutePath
+    )
+    .catch(() => {});
 }
 
 router.get(
-  "/",
+  "/support",
+
+  requireAuth,
+
+  requirePasswordChanged,
+
   async (
     req,
     res
   ) => {
     try {
+      const isAdmin =
+        req.user.role ===
+        "admin";
+
       const result =
-        await pool.query(
-          `
-          SELECT
-            s.id,
-            s.user_id,
-            s.title,
-            s.type,
-            s.description,
-            s.status,
-            s.file_name,
-            s.file_path,
-            s.created_at,
-            s.updated_at,
+        isAdmin
+          ? await pool.query(
+              `
+                SELECT
+                  sr.*,
+                  du.email,
+                  du.role AS user_role
 
-            u.email AS user_email,
-            u.role AS user_role
+                FROM public.support_requests sr
 
-          FROM public.support_requests s
+                LEFT JOIN public.dashboard_users du
+                  ON du.id = sr.user_id
 
-          JOIN public.dashboard_users u
-            ON u.id = s.user_id
+                ORDER BY sr.created_at DESC
+              `
+            )
+          : await pool.query(
+              `
+                SELECT
+                  sr.*,
+                  du.email,
+                  du.role AS user_role
 
-          ORDER BY
-            s.created_at DESC,
-            s.id DESC
-          `
-        );
+                FROM public.support_requests sr
+
+                LEFT JOIN public.dashboard_users du
+                  ON du.id = sr.user_id
+
+                WHERE sr.user_id = $1
+
+                ORDER BY sr.created_at DESC
+              `,
+              [
+                Number(
+                  req.user.id
+                ),
+              ]
+            );
 
       return res.json({
-        success: true,
-        requests: result.rows
+        success:
+          true,
+
+        requests:
+          result.rows,
       });
     } catch (error) {
       console.error(
-        "GET SUPPORT ERROR:",
+        "LOAD SUPPORT ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      return res
+        .status(500)
+        .json({
+          success:
+            false,
+
+          message:
+            "Internal server error",
+        });
     }
   }
 );
 
 router.post(
-  "/",
+  "/support",
+
+  requireAuth,
+
+  requirePasswordChanged,
+
   (
     req,
     res,
     next
   ) => {
-    upload.single("file")(
+    upload.single(
+      "file"
+    )(
       req,
       res,
       (error) => {
-        if (error) {
-          console.error(
-            "SUPPORT UPLOAD ERROR:",
-            error
-          );
-
-          return res.status(400).json({
-            success: false,
-            message:
-              error.code ===
-              "LIMIT_FILE_SIZE"
-                ? "File is too large"
-                : "Invalid file upload"
-          });
+        if (!error) {
+          return next();
         }
 
-        return next();
+        if (
+          error instanceof
+          multer.MulterError
+        ) {
+          if (
+            error.code ===
+            "LIMIT_FILE_SIZE"
+          ) {
+            return res
+              .status(413)
+              .json({
+                success:
+                  false,
+
+                message:
+                  "File size must be 10MB or less",
+              });
+          }
+
+          return res
+            .status(400)
+            .json({
+              success:
+                false,
+
+              message:
+                "Invalid file upload",
+            });
+        }
+
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
+
+            message:
+              error?.message ||
+              "Invalid file upload",
+          });
       }
     );
   },
@@ -239,17 +509,20 @@ router.post(
     req,
     res
   ) => {
+    let uploadedFile =
+      null;
+
     try {
       const title =
         String(
           req.body.title ||
-            ""
+          ""
         ).trim();
 
       const type =
         String(
           req.body.type ||
-            ""
+          ""
         )
           .trim()
           .toUpperCase();
@@ -257,53 +530,61 @@ router.post(
       const description =
         String(
           req.body.description ||
-            ""
+          ""
         ).trim();
+
+      const allowedTypes =
+        new Set([
+          "BUG",
+          "QUESTION",
+          "FEEDBACK",
+          "CHANGE_REQUEST",
+        ]);
 
       if (
         !title ||
         !type ||
         !description
       ) {
-        removeUploadedFile(
-          req.file
-        );
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Title, type and description are required"
-        });
+            message:
+              "Required fields are missing",
+          });
       }
 
       if (
         title.length >
         200
       ) {
-        removeUploadedFile(
-          req.file
-        );
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Title is too long"
-        });
+            message:
+              "Title is too long",
+          });
       }
 
       if (
         description.length >
         10000
       ) {
-        removeUploadedFile(
-          req.file
-        );
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Description is too long"
-        });
+            message:
+              "Description is too long",
+          });
       }
 
       if (
@@ -311,109 +592,84 @@ router.post(
           type
         )
       ) {
-        removeUploadedFile(
-          req.file
-        );
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid request type"
-        });
+            message:
+              "Invalid request type",
+          });
       }
-
-      const userId =
-        Number(
-          req.user.id
-        );
 
       if (
-        !Number.isInteger(
-          userId
-        )
+        req.file
       ) {
-        removeUploadedFile(
-          req.file
-        );
-
-        return res.status(401).json({
-          success: false,
-          message:
-            "Invalid user"
-        });
+        uploadedFile =
+          await persistValidatedFile(
+            req.file
+          );
       }
-
-      const fileName =
-        req.file
-          ? req.file.originalname
-          : null;
-
-      const filePath =
-        req.file
-          ? `/uploads/support/${req.file.filename}`
-          : null;
 
       const result =
         await pool.query(
           `
-          INSERT INTO public.support_requests
-          (
-            user_id,
-            title,
-            type,
-            description,
-            status,
-            file_name,
-            file_path
-          )
-          VALUES
-          (
-            $1,
-            $2,
-            $3,
-            $4,
-            'open',
-            $5,
-            $6
-          )
-          RETURNING
-            id,
-            user_id,
-            title,
-            type,
-            description,
-            status,
-            file_name,
-            file_path,
-            created_at,
-            updated_at
+            INSERT INTO public.support_requests (
+              user_id,
+              title,
+              type,
+              description,
+              file_name,
+              file_path,
+              created_at
+            )
+
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              NOW()
+            )
+
+            RETURNING *
           `,
           [
-            userId,
+            Number(
+              req.user.id
+            ),
+
             title,
+
             type,
+
             description,
-            fileName,
-            filePath
+
+            uploadedFile
+              ?.fileName ||
+              null,
+
+            uploadedFile
+              ?.filePath ||
+              null,
           ]
         );
 
-      return res.status(201).json({
-        success: true,
+      return res
+        .status(201)
+        .json({
+          success:
+            true,
 
-        request: {
-          ...result.rows[0],
-
-          user_email:
-            req.user.email,
-
-          user_role:
-            req.user.role
-        }
-      });
+          request:
+            result.rows[0],
+        });
     } catch (error) {
-      removeUploadedFile(
-        req.file
+      deleteStoredFile(
+        uploadedFile
       );
 
       console.error(
@@ -421,11 +677,32 @@ router.post(
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          "Internal server error"
-      });
+      if (
+        error?.message ===
+          "Unsupported or invalid file content" ||
+        error?.message ===
+          "File content does not match file type"
+      ) {
+        return res
+          .status(400)
+          .json({
+            success:
+              false,
+
+            message:
+              error.message,
+          });
+      }
+
+      return res
+        .status(500)
+        .json({
+          success:
+            false,
+
+          message:
+            "Internal server error",
+        });
     }
   }
 );

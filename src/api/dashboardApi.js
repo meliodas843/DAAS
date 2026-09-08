@@ -3,28 +3,6 @@ const API =
     .VITE_API_URL ||
   "http://localhost:8000/api";
 
-const TOKEN_KEY =
-  "admin_token";
-
-const USER_KEY =
-  "admin_user";
-
-function getToken() {
-  return localStorage.getItem(
-    TOKEN_KEY
-  );
-}
-
-function clearSession() {
-  localStorage.removeItem(
-    TOKEN_KEY
-  );
-
-  localStorage.removeItem(
-    USER_KEY
-  );
-}
-
 function buildQuery(
   filters = {}
 ) {
@@ -36,8 +14,7 @@ function buildQuery(
   ).forEach(
     ([key, value]) => {
       if (
-        value !==
-          undefined &&
+        value !== undefined &&
         value !== null &&
         value !== "" &&
         value !== "all"
@@ -62,27 +39,6 @@ async function request(
   path,
   filters = {}
 ) {
-  const token =
-    getToken();
-
-  if (!token) {
-    clearSession();
-
-    if (
-      window.location
-        .pathname !==
-      "/login"
-    ) {
-      window.location.replace(
-        "/login"
-      );
-    }
-
-    throw new Error(
-      "Authentication required"
-    );
-  }
-
   const response =
     await fetch(
       `${API}${path}${buildQuery(
@@ -90,12 +46,14 @@ async function request(
       )}`,
       {
         method: "GET",
+
+        credentials:
+          "include",
+
         headers: {
           Accept:
             "application/json",
-          Authorization:
-            `Bearer ${token}`
-        }
+        },
       }
     );
 
@@ -112,7 +70,13 @@ async function request(
     response.status ===
     401
   ) {
-    clearSession();
+    localStorage.removeItem(
+      "auth_session"
+    );
+
+    localStorage.removeItem(
+      "last_activity_at"
+    );
 
     if (
       window.location
@@ -135,21 +99,23 @@ async function request(
   ) {
     throw new Error(
       data?.message ||
-        "Access denied"
+      "Access denied"
     );
   }
 
   if (!response.ok) {
     throw new Error(
       data?.message ||
-        `HTTP ${response.status}`
+      `HTTP ${response.status}`
     );
   }
 
   return data;
 }
 
-function toNumber(value) {
+function toNumber(
+  value
+) {
   const number =
     Number(value);
 
@@ -164,9 +130,7 @@ function normalizeRows(
   rows
 ) {
   if (
-    !Array.isArray(
-      rows
-    )
+    !Array.isArray(rows)
   ) {
     return [];
   }
@@ -174,10 +138,11 @@ function normalizeRows(
   return rows.map(
     (item) => ({
       ...item,
+
       value:
         toNumber(
           item.value
-        )
+        ),
     })
   );
 }
@@ -225,76 +190,91 @@ export async function getKpis(
       toNumber(
         data?.revenue
       ),
+
     revenue_previous:
       toNumber(
         data
           ?.revenue_previous
       ),
+
     revenue_change:
       toNumber(
         data
           ?.revenue_change
       ),
+
     expense:
       toNumber(
         data?.expense
       ),
+
     expense_previous:
       toNumber(
         data
           ?.expense_previous
       ),
+
     expense_change:
       toNumber(
         data
           ?.expense_change
       ),
+
     receivable:
       toNumber(
         data?.receivable
       ),
+
     receivable_previous:
       toNumber(
         data
           ?.receivable_previous
       ),
+
     receivable_change:
       toNumber(
         data
           ?.receivable_change
       ),
+
     payable:
       toNumber(
         data?.payable
       ),
+
     payable_previous:
       toNumber(
         data
           ?.payable_previous
       ),
+
     payable_change:
       toNumber(
         data
           ?.payable_change
       ),
+
     net_profit:
       toNumber(
         data?.net_profit
       ),
+
     net_profit_previous:
       toNumber(
         data
           ?.net_profit_previous
       ),
+
     net_profit_change:
       toNumber(
         data
           ?.net_profit_change
       ),
+
     margin:
       toNumber(
         data?.margin
-      )
+      ),
   };
 }
 
@@ -312,18 +292,21 @@ export async function getAreaStats(
       toNumber(
         data?.rented
       ),
+
     total:
       toNumber(
         data?.total
       ),
+
     vacant:
       toNumber(
         data?.vacant
       ),
+
     utilization:
       toNumber(
         data?.utilization
-      )
+      ),
   };
 }
 
@@ -462,18 +445,21 @@ export async function getRevenueMonthly(
         (item) => ({
           month:
             item.month,
+
           revenue:
             toNumber(
               item.revenue
             ),
+
           expense:
             toNumber(
               item.expense
             ),
+
           profit:
             toNumber(
               item.profit
-            )
+            ),
         })
       )
     : [];
@@ -528,14 +514,16 @@ export async function getBranchRevenueExpense(
         (item) => ({
           name:
             item.name,
+
           revenue:
             toNumber(
               item.revenue
             ),
+
           expense:
             toNumber(
               item.expense
-            )
+            ),
         })
       )
     : [];
@@ -555,22 +543,26 @@ export async function getCashFlowSummary(
       toNumber(
         data?.total
       ),
+
     balance:
       toNumber(
         data?.balance
       ),
+
     operating:
       toNumber(
         data?.operating
       ),
+
     financing:
       toNumber(
         data?.financing
       ),
+
     investing:
       toNumber(
         data?.investing
-      )
+      ),
   };
 }
 

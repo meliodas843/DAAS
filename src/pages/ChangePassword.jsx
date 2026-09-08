@@ -254,7 +254,6 @@ export default function ChangePassword() {
     useNavigate();
 
   const {
-    token,
     user,
     login
   } = useAuth();
@@ -400,12 +399,15 @@ export default function ChangePassword() {
             method:
               "POST",
 
+            credentials:
+              "include",
+
             headers: {
               "Content-Type":
                 "application/json",
 
-              Authorization:
-                `Bearer ${token}`
+              Accept:
+                "application/json"
             },
 
             body:
@@ -441,7 +443,6 @@ export default function ChangePassword() {
       }
 
       login(
-        data.token,
         data.user
       );
 

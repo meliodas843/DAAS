@@ -9,37 +9,106 @@ LEFT JOIN public.res_branch rb
 WHERE am.state = 'posted'
 `;
 
+function validateDate(value, name) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const text = String(value).trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    throw new Error(`Invalid ${name}`);
+  }
+
+  const date = new Date(`${text}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== text
+  ) {
+    throw new Error(`Invalid ${name}`);
+  }
+
+  return text;
+}
+
+function validateBranchId(value) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    value === "all"
+  ) {
+    return null;
+  }
+
+  const text = String(value).trim();
+
+  if (!/^\d+$/.test(text)) {
+    throw new Error("Invalid branch_id");
+  }
+
+  const number = Number(text);
+
+  if (
+    !Number.isSafeInteger(number) ||
+    number <= 0
+  ) {
+    throw new Error("Invalid branch_id");
+  }
+
+  return number;
+}
+
 export function buildFilters(
   dateFrom,
   dateTo,
   branchId
 ) {
+  const validatedDateFrom =
+    validateDate(dateFrom, "date_from");
+
+  const validatedDateTo =
+    validateDate(dateTo, "date_to");
+
+  const validatedBranchId =
+    validateBranchId(branchId);
+
+  if (
+    validatedDateFrom &&
+    validatedDateTo &&
+    validatedDateFrom > validatedDateTo
+  ) {
+    throw new Error(
+      "date_from must be before or equal to date_to"
+    );
+  }
+
   const values = [];
   const conditions = [];
 
-  if (dateFrom) {
-    values.push(dateFrom);
+  if (validatedDateFrom) {
+    values.push(validatedDateFrom);
 
     conditions.push(
       `aml.date >= $${values.length}::date`
     );
   }
 
-  if (dateTo) {
-    values.push(dateTo);
+  if (validatedDateTo) {
+    values.push(validatedDateTo);
 
     conditions.push(
       `aml.date <= $${values.length}::date`
     );
   }
 
-  if (
-    branchId !== undefined &&
-    branchId !== null &&
-    branchId !== "" &&
-    branchId !== "all"
-  ) {
-    values.push(Number(branchId));
+  if (validatedBranchId !== null) {
+    values.push(validatedBranchId);
 
     conditions.push(
       `aml.branch_id = $${values.length}`
@@ -51,7 +120,7 @@ export function buildFilters(
       conditions.length > 0
         ? `AND ${conditions.join(" AND ")}`
         : "",
-    values
+    values,
   };
 }
 
@@ -94,7 +163,10 @@ export function rowsToNumbers(rows) {
   return rows.map((row) => {
     const output = {};
 
-    for (const [key, value] of Object.entries(row)) {
+    for (
+      const [key, value]
+      of Object.entries(row)
+    ) {
       if (
         [
           "value",
@@ -105,16 +177,120 @@ export function rowsToNumbers(rows) {
           "residual",
           "collected",
           "rate",
-          "total"
+          "total",
+          "receivable",
+          "payable",
+          "net_profit",
+          "operating",
+          "investing",
+          "financing",
         ].includes(key)
       ) {
         output[key] =
           toNumber(value);
       } else {
-        output[key] = value;
+        output[key] =
+          value;
       }
     }
 
     return output;
   });
+}
+
+export function parseDateParam(
+  value,
+  name
+) {
+  return validateDate(
+    value,
+    name
+  );
+}
+
+export function parsePositiveIntegerParam(
+  value,
+  name
+) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const text =
+    String(value).trim();
+
+  if (!/^\d+$/.test(text)) {
+    throw new Error(
+      `Invalid ${name}`
+    );
+  }
+
+  const number =
+    Number(text);
+
+  if (
+    !Number.isSafeInteger(number) ||
+    number <= 0
+  ) {
+    throw new Error(
+      `Invalid ${name}`
+    );
+  }
+
+  return number;
+}
+
+export function parseDashboardFilters(
+  query
+) {
+  const dateFrom =
+    validateDate(
+      query.date_from,
+      "date_from"
+    );
+
+  const dateTo =
+    validateDate(
+      query.date_to,
+      "date_to"
+    );
+
+  const branchId =
+    validateBranchId(
+      query.branch_id
+    );
+
+  if (
+    dateFrom &&
+    dateTo &&
+    dateFrom > dateTo
+  ) {
+    throw new Error(
+      "date_from must be before or equal to date_to"
+    );
+  }
+
+  return {
+    dateFrom,
+    dateTo,
+    branchId,
+  };
+}
+
+export function sendInvalidQuery(
+  res,
+  error
+) {
+  return res
+    .status(400)
+    .json({
+      success: false,
+      message:
+        error?.message ||
+        "Invalid query parameters",
+    });
 }

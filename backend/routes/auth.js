@@ -5,29 +5,94 @@ import jwt from "jsonwebtoken";
 import pool from "../db.js";
 
 import {
-  requireAuth
+  requireAuth,
 } from "../middleware/auth.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-const MAX_FAILED_ATTEMPTS = 5;
+const MAX_FAILED_ATTEMPTS =
+  5;
 
 const PASSWORD_MESSAGE =
   "Нууц үг хамгийн багадаа 10 тэмдэгт, том үсэг, жижиг үсэг, тоо болон тусгай тэмдэг агуулсан байна";
 
+const COOKIE_NAME =
+  "auth_token";
+
+const COOKIE_MAX_AGE =
+  8 *
+  60 *
+  60 *
+  1000;
+
+function getCookieOptions() {
+  const production =
+    process.env.NODE_ENV ===
+    "production";
+
+  return {
+    httpOnly:
+      true,
+
+    secure:
+      production,
+
+    sameSite:
+      production
+        ? "strict"
+        : "lax",
+
+    maxAge:
+      COOKIE_MAX_AGE,
+
+    path:
+      "/",
+  };
+}
+
+function getClearCookieOptions() {
+  const options =
+    getCookieOptions();
+
+  return {
+    httpOnly:
+      options.httpOnly,
+
+    secure:
+      options.secure,
+
+    sameSite:
+      options.sameSite,
+
+    path:
+      options.path,
+  };
+}
+
 function isStrongPassword(
   password
 ) {
-  const value = String(
-    password || ""
-  );
+  const value =
+    String(
+      password || ""
+    );
 
   return (
-    value.length >= 10 &&
-    /\p{Lu}/u.test(value) &&
-    /\p{Ll}/u.test(value) &&
-    /\d/.test(value) &&
-    /[^\p{L}\d\s]/u.test(value)
+    value.length >=
+      10 &&
+    /\p{Lu}/u.test(
+      value
+    ) &&
+    /\p{Ll}/u.test(
+      value
+    ) &&
+    /\d/.test(
+      value
+    ) &&
+    /[^\p{L}\d\s]/u.test(
+      value
+    )
   );
 }
 
@@ -35,15 +100,21 @@ function normalizeUser(
   row
 ) {
   return {
-    id: Number(row.id),
+    id:
+      Number(
+        row.id
+      ),
 
-    email: row.email,
+    email:
+      row.email,
 
-    role: String(
-      row.role || "viewer"
-    )
-      .trim()
-      .toLowerCase(),
+    role:
+      String(
+        row.role ||
+        "viewer"
+      )
+        .trim()
+        .toLowerCase(),
 
     must_change_password:
       Boolean(
@@ -63,8 +134,8 @@ function normalizeUser(
     failed_login_attempts:
       Number(
         row.failed_login_attempts ||
-          0
-      )
+        0
+      ),
   };
 }
 
@@ -81,8 +152,8 @@ function createToken(
       token_version:
         Number(
           user.token_version ||
-            0
-        )
+          0
+        ),
     },
 
     process.env.JWT_SECRET,
@@ -90,13 +161,14 @@ function createToken(
     {
       expiresIn:
         process.env.JWT_EXPIRES_IN ||
-        "8h"
+        "8h",
     }
   );
 }
 
 router.post(
   "/auth/login",
+
   async (
     req,
     res
@@ -105,7 +177,7 @@ router.post(
       const email =
         String(
           req.body.email ||
-            ""
+          ""
         )
           .trim()
           .toLowerCase();
@@ -113,7 +185,7 @@ router.post(
       const password =
         String(
           req.body.password ||
-            ""
+          ""
         );
 
       if (
@@ -123,9 +195,11 @@ router.post(
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "И-мэйл болон нууц үгээ оруулна уу"
+              "И-мэйл болон нууц үгээ оруулна уу",
           });
       }
 
@@ -143,12 +217,15 @@ router.post(
               failed_login_attempts,
               blocked_at,
               token_version
+
             FROM public.dashboard_users
+
             WHERE LOWER(email) = $1
+
             LIMIT 1
           `,
           [
-            email
+            email,
           ]
         );
 
@@ -159,11 +236,14 @@ router.post(
         return res
           .status(401)
           .json({
-            success: false,
+            success:
+              false,
+
             code:
               "INVALID_CREDENTIALS",
+
             message:
-              "И-мэйл эсвэл нууц үг буруу байна"
+              "И-мэйл эсвэл нууц үг буруу байна",
           });
       }
 
@@ -178,11 +258,14 @@ router.post(
         return res
           .status(401)
           .json({
-            success: false,
+            success:
+              false,
+
             code:
               "ACCOUNT_DISABLED",
+
             message:
-              "Хэрэглэгч идэвхгүй байна"
+              "Хэрэглэгч идэвхгүй байна",
           });
       }
 
@@ -194,11 +277,14 @@ router.post(
         return res
           .status(423)
           .json({
-            success: false,
+            success:
+              false,
+
             code:
               "ACCOUNT_BLOCKED",
+
             message:
-              "Хэрэглэгч блоклогдсон байна"
+              "Хэрэглэгч блоклогдсон байна",
           });
       }
 
@@ -214,7 +300,7 @@ router.post(
         const failedAttempts =
           Number(
             user.failed_login_attempts ||
-              0
+            0
           ) + 1;
 
         const shouldBlock =
@@ -224,6 +310,7 @@ router.post(
         await pool.query(
           `
             UPDATE public.dashboard_users
+
             SET
               failed_login_attempts = $1,
 
@@ -232,18 +319,18 @@ router.post(
               blocked_at =
                 CASE
                   WHEN $2 = true
-                  THEN NOW()
+                    THEN NOW()
                   ELSE blocked_at
                 END,
 
               token_version =
                 CASE
                   WHEN $2 = true
-                  THEN
-                    COALESCE(
-                      token_version,
-                      0
-                    ) + 1
+                    THEN
+                      COALESCE(
+                        token_version,
+                        0
+                      ) + 1
                   ELSE
                     COALESCE(
                       token_version,
@@ -251,7 +338,8 @@ router.post(
                     )
                 END,
 
-              updated_at = NOW()
+              updated_at =
+                NOW()
 
             WHERE id = $3
           `,
@@ -260,21 +348,29 @@ router.post(
             shouldBlock,
             Number(
               user.id
-            )
+            ),
           ]
         );
 
         if (
           shouldBlock
         ) {
+          res.clearCookie(
+            COOKIE_NAME,
+            getClearCookieOptions()
+          );
+
           return res
             .status(423)
             .json({
-              success: false,
+              success:
+                false,
+
               code:
                 "ACCOUNT_BLOCKED",
+
               message:
-                "5 удаа нууц үг буруу оруулсан тул хэрэглэгч блоклогдлоо"
+                "5 удаа нууц үг буруу оруулсан тул хэрэглэгч блоклогдлоо",
             });
         }
 
@@ -285,7 +381,9 @@ router.post(
         return res
           .status(401)
           .json({
-            success: false,
+            success:
+              false,
+
             code:
               "INVALID_CREDENTIALS",
 
@@ -293,24 +391,26 @@ router.post(
               remainingAttempts,
 
             message:
-              `И-мэйл эсвэл нууц үг буруу байна. Үлдсэн оролдлого: ${remainingAttempts}`
+              `И-мэйл эсвэл нууц үг буруу байна. Үлдсэн оролдлого: ${remainingAttempts}`,
           });
       }
 
       await pool.query(
         `
           UPDATE public.dashboard_users
+
           SET
             failed_login_attempts = 0,
             is_blocked = false,
             blocked_at = NULL,
             updated_at = NOW()
+
           WHERE id = $1
         `,
         [
           Number(
             user.id
-          )
+          ),
         ]
       );
 
@@ -326,38 +426,56 @@ router.post(
               is_blocked,
               failed_login_attempts,
               token_version
+
             FROM public.dashboard_users
+
             WHERE id = $1
+
             LIMIT 1
           `,
           [
             Number(
               user.id
-            )
+            ),
           ]
         );
 
       const refreshed =
         refreshedResult.rows[0];
 
+      if (!refreshed) {
+        return res
+          .status(401)
+          .json({
+            success:
+              false,
+
+            message:
+              "Хэрэглэгч олдсонгүй",
+          });
+      }
+
       const token =
         createToken(
           refreshed
         );
 
-      return res.json({
-        success: true,
-
+      res.cookie(
+        COOKIE_NAME,
         token,
+        getCookieOptions()
+      );
+
+      return res.json({
+        success:
+          true,
 
         user:
           normalizeUser(
             refreshed
-          )
+          ),
       });
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "LOGIN ERROR:",
         error
@@ -366,9 +484,11 @@ router.post(
       return res
         .status(500)
         .json({
-          success: false,
+          success:
+            false,
+
           message:
-            "Internal server error"
+            "Internal server error",
         });
     }
   }
@@ -376,7 +496,9 @@ router.post(
 
 router.get(
   "/auth/me",
+
   requireAuth,
+
   async (
     req,
     res
@@ -394,14 +516,17 @@ router.get(
               is_blocked,
               failed_login_attempts,
               token_version
+
             FROM public.dashboard_users
+
             WHERE id = $1
+
             LIMIT 1
           `,
           [
             Number(
               req.user.id
-            )
+            ),
           ]
         );
 
@@ -412,25 +537,24 @@ router.get(
         return res
           .status(401)
           .json({
-            success: false,
-            code:
-              "USER_REMOVED",
+            success:
+              false,
+
             message:
-              "Хэрэглэгч олдсонгүй"
+              "Хэрэглэгч олдсонгүй",
           });
       }
 
       return res.json({
-        success: true,
+        success:
+          true,
 
         user:
           normalizeUser(
             result.rows[0]
-          )
+          ),
       });
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "AUTH ME ERROR:",
         error
@@ -439,9 +563,11 @@ router.get(
       return res
         .status(500)
         .json({
-          success: false,
+          success:
+            false,
+
           message:
-            "Internal server error"
+            "Internal server error",
         });
     }
   }
@@ -449,7 +575,9 @@ router.get(
 
 router.post(
   "/auth/logout",
+
   requireAuth,
+
   async (
     req,
     res
@@ -458,6 +586,7 @@ router.post(
       await pool.query(
         `
           UPDATE public.dashboard_users
+
           SET
             token_version =
               COALESCE(
@@ -472,16 +601,20 @@ router.post(
         [
           Number(
             req.user.id
-          )
+          ),
         ]
       );
 
+      res.clearCookie(
+        COOKIE_NAME,
+        getClearCookieOptions()
+      );
+
       return res.json({
-        success: true
+        success:
+          true,
       });
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "LOGOUT ERROR:",
         error
@@ -490,9 +623,11 @@ router.post(
       return res
         .status(500)
         .json({
-          success: false,
+          success:
+            false,
+
           message:
-            "Internal server error"
+            "Internal server error",
         });
     }
   }
@@ -500,7 +635,9 @@ router.post(
 
 router.post(
   "/auth/change-password",
+
   requireAuth,
+
   async (
     req,
     res
@@ -509,42 +646,42 @@ router.post(
       const currentPassword =
         String(
           req.body.current_password ||
-            ""
+          ""
         );
 
       const newPassword =
         String(
           req.body.new_password ||
-            ""
+          ""
         );
 
       const confirmPassword =
         String(
           req.body.confirm_password ||
-            ""
+          ""
         );
 
-      if (
-        !currentPassword
-      ) {
+      if (!currentPassword) {
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "Одоогийн нууц үгээ оруулна уу"
+              "Одоогийн нууц үгээ оруулна уу",
           });
       }
 
-      if (
-        !newPassword
-      ) {
+      if (!newPassword) {
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "Шинэ нууц үгээ оруулна уу"
+              "Шинэ нууц үгээ оруулна уу",
           });
       }
 
@@ -556,11 +693,11 @@ router.post(
         return res
           .status(400)
           .json({
-            success: false,
-            code:
-              "WEAK_PASSWORD",
+            success:
+              false,
+
             message:
-              PASSWORD_MESSAGE
+              PASSWORD_MESSAGE,
           });
       }
 
@@ -571,9 +708,11 @@ router.post(
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "Нууц үг таарахгүй байна"
+              "Нууц үг таарахгүй байна",
           });
       }
 
@@ -582,39 +721,35 @@ router.post(
           `
             SELECT
               id,
-              email,
-              password_hash,
-              role,
-              must_change_password,
-              is_active,
-              is_blocked,
-              token_version
+              password_hash
+
             FROM public.dashboard_users
+
             WHERE id = $1
+
             LIMIT 1
           `,
           [
             Number(
               req.user.id
-            )
+            ),
           ]
         );
 
-      if (
-        result.rows.length ===
-        0
-      ) {
+      const user =
+        result.rows[0];
+
+      if (!user) {
         return res
           .status(404)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "User not found"
+              "User not found",
           });
       }
-
-      const user =
-        result.rows[0];
 
       const currentValid =
         await bcrypt.compare(
@@ -622,15 +757,15 @@ router.post(
           user.password_hash
         );
 
-      if (
-        !currentValid
-      ) {
+      if (!currentValid) {
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "Одоогийн нууц үг буруу байна"
+              "Одоогийн нууц үг буруу байна",
           });
       }
 
@@ -640,15 +775,15 @@ router.post(
           user.password_hash
         );
 
-      if (
-        samePassword
-      ) {
+      if (samePassword) {
         return res
           .status(400)
           .json({
-            success: false,
+            success:
+              false,
+
             message:
-              "Шинэ нууц үг хуучин нууц үгтэй ижил байж болохгүй"
+              "Шинэ нууц үг хуучин нууц үгтэй ижил байж болохгүй",
           });
       }
 
@@ -662,6 +797,7 @@ router.post(
         await pool.query(
           `
             UPDATE public.dashboard_users
+
             SET
               password_hash = $1,
               must_change_password = false,
@@ -693,7 +829,7 @@ router.post(
             passwordHash,
             Number(
               req.user.id
-            )
+            ),
           ]
         );
 
@@ -705,22 +841,25 @@ router.post(
           updatedUser
         );
 
+      res.cookie(
+        COOKIE_NAME,
+        token,
+        getCookieOptions()
+      );
+
       return res.json({
-        success: true,
+        success:
+          true,
 
         message:
           "Нууц үг амжилттай шинэчлэгдлээ",
 
-        token,
-
         user:
           normalizeUser(
             updatedUser
-          )
+          ),
       });
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "CHANGE PASSWORD ERROR:",
         error
@@ -729,9 +868,11 @@ router.post(
       return res
         .status(500)
         .json({
-          success: false,
+          success:
+            false,
+
           message:
-            "Internal server error"
+            "Internal server error",
         });
     }
   }

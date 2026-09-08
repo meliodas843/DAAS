@@ -4,15 +4,11 @@ import {
 } from "react";
 
 const API =
-  import.meta.env
-    .VITE_API_URL ||
+  import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
-const TOKEN_KEY =
-  "admin_token";
-
-const USER_KEY =
-  "admin_user";
+const SESSION_MARKER =
+  "auth_session";
 
 const LAST_ACTIVITY_KEY =
   "last_activity_at";
@@ -26,21 +22,29 @@ const SESSION_CHECK_INTERVAL =
 const ACTIVITY_WRITE_INTERVAL =
   15 * 1000;
 
+function hasSession() {
+  return (
+    localStorage.getItem(
+      SESSION_MARKER
+    ) === "1"
+  );
+}
+
 function clearSession() {
   localStorage.removeItem(
-    TOKEN_KEY
-  );
-
-  localStorage.removeItem(
-    USER_KEY
-  );
-
-  localStorage.removeItem(
-    "must_change_password"
+    SESSION_MARKER
   );
 
   localStorage.removeItem(
     LAST_ACTIVITY_KEY
+  );
+
+  localStorage.removeItem(
+    "admin_user"
+  );
+
+  localStorage.removeItem(
+    "must_change_password"
   );
 }
 
@@ -58,25 +62,19 @@ function redirectLogin() {
 async function forceLogout(
   notifyServer = true
 ) {
-  const token =
-    localStorage.getItem(
-      TOKEN_KEY
-    );
-
   if (
     notifyServer &&
-    token
+    hasSession()
   ) {
     try {
       await fetch(
         `${API}/auth/logout`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             Accept:
-              "application/json",
-            Authorization:
-              `Bearer ${token}`
+              "application/json"
           }
         }
       );
@@ -96,12 +94,7 @@ export default function SessionWatcher() {
     let checking = false;
 
     function markActivity() {
-      const token =
-        localStorage.getItem(
-          TOKEN_KEY
-        );
-
-      if (!token) {
+      if (!hasSession()) {
         return;
       }
 
@@ -126,12 +119,7 @@ export default function SessionWatcher() {
     }
 
     function ensureActivityTimestamp() {
-      const token =
-        localStorage.getItem(
-          TOKEN_KEY
-        );
-
-      if (!token) {
+      if (!hasSession()) {
         return;
       }
 
@@ -162,12 +150,7 @@ export default function SessionWatcher() {
     }
 
     async function checkIdle() {
-      const token =
-        localStorage.getItem(
-          TOKEN_KEY
-        );
-
-      if (!token) {
+      if (!hasSession()) {
         return;
       }
 
@@ -193,13 +176,8 @@ export default function SessionWatcher() {
     }
 
     async function checkSession() {
-      const token =
-        localStorage.getItem(
-          TOKEN_KEY
-        );
-
       if (
-        !token ||
+        !hasSession() ||
         checking
       ) {
         return;
@@ -213,22 +191,18 @@ export default function SessionWatcher() {
             `${API}/auth/me`,
             {
               method: "GET",
+              credentials: "include",
               headers: {
                 Accept:
-                  "application/json",
-                Authorization:
-                  `Bearer ${token}`
+                  "application/json"
               }
             }
           );
 
         if (
-          response.status ===
-            401 ||
-          response.status ===
-            403 ||
-          response.status ===
-            423
+          response.status === 401 ||
+          response.status === 403 ||
+          response.status === 423
         ) {
           if (active) {
             await forceLogout(
@@ -239,9 +213,7 @@ export default function SessionWatcher() {
           return;
         }
 
-        if (
-          !response.ok
-        ) {
+        if (!response.ok) {
           console.error(
             "Session check failed:",
             response.status
@@ -258,7 +230,6 @@ export default function SessionWatcher() {
     }
 
     ensureActivityTimestamp();
-
     checkSession();
     checkIdle();
 
@@ -284,9 +255,7 @@ export default function SessionWatcher() {
     ];
 
     activityEvents.forEach(
-      (
-        eventName
-      ) => {
+      (eventName) => {
         window.addEventListener(
           eventName,
           markActivity,
@@ -313,12 +282,10 @@ export default function SessionWatcher() {
       }
     }
 
-    function handleStorage(
-      event
-    ) {
+    function handleStorage(event) {
       if (
         event.key ===
-          TOKEN_KEY &&
+          SESSION_MARKER &&
         !event.newValue
       ) {
         redirectLogin();
@@ -352,9 +319,7 @@ export default function SessionWatcher() {
       );
 
       activityEvents.forEach(
-        (
-          eventName
-        ) => {
+        (eventName) => {
           window.removeEventListener(
             eventName,
             markActivity
