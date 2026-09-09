@@ -110,25 +110,6 @@ const apiLimiter =
     },
   });
 
-const loginLimiter =
-  rateLimit({
-    windowMs:
-      15 * 60_000,
-    limit: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      success: false,
-      message:
-        "Хэт олон нэвтрэх оролдлого хийлээ. Түр хүлээгээд дахин оролдоно уу.",
-    },
-  });
-
-app.use(
-  "/api/auth/login",
-  loginLimiter
-);
-
 app.use(
   "/api",
   apiLimiter
