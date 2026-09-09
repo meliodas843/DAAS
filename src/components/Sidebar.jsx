@@ -174,7 +174,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        <NavLink
+        {/* <NavLink
           to="/help"
           title={
             sidebarCollapsed
@@ -207,7 +207,7 @@ export default function Sidebar() {
                 : "Help"}
             </span>
           )}
-        </NavLink>
+        </NavLink> */}
 
         {user?.role === "admin" && (
           <NavLink
