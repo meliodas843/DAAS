@@ -28,6 +28,10 @@ import {
   requireFinancialAccess,
 } from "./middleware/auth.js";
 
+import {
+  requireAllowedIp,
+} from "./middleware/ipAllowlist.js";
+
 const app = express();
 
 const isProduction =
@@ -163,6 +167,11 @@ app.get(
       });
     }
   }
+);
+
+app.use(
+  "/api",
+  requireAllowedIp
 );
 
 app.use(
@@ -343,9 +352,10 @@ async function start() {
 
     app.listen(
       PORT,
+      "127.0.0.1",
       () => {
         console.log(
-          `Backend running on http://localhost:${PORT}`
+          `Backend running on http://127.0.0.1:${PORT}`
         );
       }
     );
