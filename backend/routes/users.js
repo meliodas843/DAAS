@@ -1041,41 +1041,44 @@ router.post(
 
 router.delete(
   "/:id",
-  async (
-    req,
-    res
-  ) => {
-    const client =
-      await pool.connect();
+  async (req, res) => {
+    const client = await pool.connect();
 
     try {
-      const userId =
-        Number(
-          req.params.id
-        );
+      const userId = Number(
+        req.params.id
+      );
 
       if (
-        !Number.isInteger(
-          userId
-        )
+        !Number.isInteger(userId) ||
+        userId <= 0
       ) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid user id"
+          message: "Invalid user ID"
         });
       }
 
+      const adminId = Number(
+        req.user?.id
+      );
+
       if (
-        userId ===
-        Number(
-          req.user.id
-        )
+        !Number.isInteger(adminId) ||
+        adminId <= 0
       ) {
+        return res.status(401).json({
+          success: false,
+          message:
+            "Admin authentication required"
+        });
+      }
+
+      if (userId === adminId) {
         return res.status(400).json({
           success: false,
           message:
-            "Өөрийн хэрэглэгчийг устгах боломжгүй"
+            "You cannot delete your own account"
         });
       }
 
@@ -1083,24 +1086,23 @@ router.delete(
         "BEGIN"
       );
 
-      const targetResult =
+      const userResult =
         await client.query(
           `
           SELECT
             id,
             email,
-            role
+            role,
+            created_at
           FROM public.dashboard_users
           WHERE id = $1
-          LIMIT 1
           FOR UPDATE
           `,
           [userId]
         );
 
       if (
-        targetResult.rows.length ===
-        0
+        userResult.rowCount === 0
       ) {
         await client.query(
           "ROLLBACK"
@@ -1108,52 +1110,62 @@ router.delete(
 
         return res.status(404).json({
           success: false,
-          message:
-            "User not found"
+          message: "User not found"
         });
       }
 
-      const target =
-        targetResult.rows[0];
-
-      if (
-        String(
-          target.role || ""
-        )
-          .trim()
-          .toLowerCase() ===
-        "admin"
-      ) {
-        const remainingAdmins =
-          await getAdminCount(
-            client,
-            userId
-          );
-
-        if (
-          remainingAdmins < 1
-        ) {
-          await client.query(
-            "ROLLBACK"
-          );
-
-          return res.status(400).json({
-            success: false,
-            code:
-              "LAST_ADMIN_DELETE_FORBIDDEN",
-            message:
-              "Сүүлийн админ хэрэглэгчийг устгах боломжгүй"
-          });
-        }
-      }
+      const targetUser =
+        userResult.rows[0];
 
       await client.query(
         `
-        DELETE FROM public.dashboard_users
-        WHERE id = $1
+        INSERT INTO
+          public.dashboard_users_deleted
+        (
+          user_id,
+          email,
+          role,
+          created_at,
+          deleted_at,
+          deleted_by
+        )
+        VALUES
+        (
+          $1,
+          $2,
+          $3,
+          $4,
+          NOW(),
+          $5
+        )
         `,
-        [userId]
+        [
+          targetUser.id,
+          targetUser.email,
+          targetUser.role,
+          targetUser.created_at,
+          adminId
+        ]
       );
+
+      const deleteResult =
+        await client.query(
+          `
+          DELETE FROM
+            public.dashboard_users
+          WHERE id = $1
+          RETURNING id
+          `,
+          [userId]
+        );
+
+      if (
+        deleteResult.rowCount === 0
+      ) {
+        throw new Error(
+          "Failed to delete user"
+        );
+      }
 
       await client.query(
         "COMMIT"
@@ -1162,15 +1174,8 @@ router.delete(
       return res.json({
         success: true,
         permanently_deleted: true,
-
-        message:
-          "Хэрэглэгч бүрэн устгагдлаа",
-
-        deleted_user: {
-          id: Number(target.id),
-          email: target.email,
-          role: target.role
-        }
+        deleted_user_id:
+          userId
       });
     } catch (error) {
       try {
@@ -1184,22 +1189,10 @@ router.delete(
         error
       );
 
-      if (
-        error?.code === "23503"
-      ) {
-        return res.status(409).json({
-          success: false,
-          code:
-            "USER_HAS_REFERENCES",
-          message:
-            "Энэ хэрэглэгчтэй холбоотой мэдээлэл байгаа тул бүрэн устгах боломжгүй байна"
-        });
-      }
-
       return res.status(500).json({
         success: false,
         message:
-          "Internal server error"
+          "Failed to delete user"
       });
     } finally {
       client.release();
