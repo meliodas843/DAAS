@@ -31,23 +31,23 @@ function getCookieOptions() {
     process.env.NODE_ENV ===
     "production";
 
+  const secure =
+    process.env.COOKIE_SECURE === "true"
+      ? true
+      : process.env.COOKIE_SECURE === "false"
+        ? false
+        : production;
+
   return {
-    httpOnly:
-      true,
-
-    secure:
-      production,
-
+    httpOnly: true,
+    secure,
     sameSite:
-      production
+      secure
         ? "strict"
         : "lax",
-
     maxAge:
       COOKIE_MAX_AGE,
-
-    path:
-      "/",
+    path: "/",
   };
 }
 
